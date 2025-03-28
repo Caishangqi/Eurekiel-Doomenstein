@@ -19,7 +19,7 @@ void MapDefinition::LoadDefinitions(const char* path)
         XmlElement* rootElement = mapDefinitions.RootElement();
         if (rootElement)
         {
-            printf("MapDefinition::LoadDefinitions    MapDefinitions config from file \"%s\" was loaded\n", path);
+            printf("MapDefinition::LoadDefinitions    MapDefinitions from \"%s\" was loaded\n", path);
             XmlElement const* element = rootElement->FirstChildElement();
             while (element != nullptr)
             {
@@ -30,17 +30,23 @@ void MapDefinition::LoadDefinitions(const char* path)
         }
         else
         {
-            printf("MapDefinition::LoadDefinitions    MapDefinitions config from file \"%s\"was invalid (missing root element)\n", path);
+            printf("MapDefinition::LoadDefinitions    MapDefinitions from \"%s\"was invalid (missing root element)\n", path);
         }
     }
     else
     {
-        printf("MapDefinition::LoadDefinitions    Failed to load MapDefinitions config from file \"%s\"\n", path);
+        printf("MapDefinition::LoadDefinitions    Failed to load MapDefinitions from \"%s\"\n", path);
     }
 }
 
 void MapDefinition::ClearDefinitions()
 {
+    for (MapDefinition& definition : s_definitions)
+    {
+        delete definition.m_shader;
+        definition.m_shader = nullptr;
+    }
+    s_definitions.clear();
 }
 
 const MapDefinition* MapDefinition::GetByName(const std::string& name)
@@ -62,6 +68,24 @@ MapDefinition::MapDefinition(XmlElement const& mapDefElement)
     m_spriteSheetCellCount = ParseXmlAttribute(mapDefElement, "spriteSheetCellCount", m_spriteSheetCellCount);
     m_spriteSheet          = new SpriteSheet(*g_theRenderer->CreateOrGetTextureFromFile(ParseXmlAttribute(mapDefElement, "spriteSheetTexture", m_name).c_str()), m_spriteSheetCellCount);
     m_shader               = g_theRenderer->CreateShaderFromFile(ParseXmlAttribute(mapDefElement, "shader", m_name).c_str(), VertexType::Vertex_PCUTBN);
+
+    const XmlElement* spawnInfosElement = FindChildElementByName(mapDefElement, "SpawnInfos");
+    if (spawnInfosElement)
+    {
+        printf("                                ‖ Loading SpawnInfos Information\n");
+        const XmlElement* spawnInfoElement = spawnInfosElement->FirstChildElement();
+        while (spawnInfoElement != nullptr)
+        {
+            SpawnInfo spawnInfo;
+            spawnInfo.m_actorName   = ParseXmlAttribute(*spawnInfoElement, "actor", spawnInfo.m_actorName);
+            spawnInfo.m_faction     = ParseXmlAttribute(*spawnInfoElement, "faction", spawnInfo.m_faction);
+            spawnInfo.m_position    = ParseXmlAttribute(*spawnInfoElement, "position", spawnInfo.m_position);
+            spawnInfo.m_orientation = ParseXmlAttribute(*spawnInfoElement, "orientation", spawnInfo.m_orientation);
+            m_spawnInfos.push_back(spawnInfo);
+            spawnInfoElement = spawnInfoElement->NextSiblingElement();
+        }
+    }
+
     printf("MapDefinition::MapDefinition    — Create Definition \"%s\" \n", m_name.c_str());
     printf("                                ‖ Map SpriteSheet Dimension: %d x %d \n", m_spriteSheetCellCount.x, m_spriteSheetCellCount.y);
     printf("                                ‖ Map Dimension: %d x %d \n", m_mapImage->GetDimensions().x, m_mapImage->GetDimensions().y);
