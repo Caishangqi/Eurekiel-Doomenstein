@@ -17,6 +17,13 @@ void Controller::Update(float deltaTime)
 
 void Controller::Possess(ActorHandle& actorHandle)
 {
+    Actor* currentPossessActor = m_map->GetActorByHandle(m_actorHandle);
+    if (currentPossessActor && currentPossessActor->m_handle.IsValid())
+        currentPossessActor->OnUnpossessed();
+    Actor* newPossessActor = m_map->GetActorByHandle(actorHandle);
+    if (newPossessActor && newPossessActor->m_handle.IsValid())
+        newPossessActor->OnPossessed(this);
+    m_actorHandle = actorHandle;
 }
 
 Actor* Controller::GetActor()
