@@ -14,7 +14,7 @@ void TileDefinition::LoadDefinitions(const char* path)
         XmlElement* rootElement = mapDefinitions.RootElement();
         if (rootElement)
         {
-            printf("TileDefinition::LoadDefinitions    TileDefinitions config from file \"%s\" was loaded\n", path);
+            printf("TileDefinition::LoadDefinitions    TileDefinitions from \"%s\" was loaded\n", path);
             XmlElement const* element = rootElement->FirstChildElement();
             while (element != nullptr)
             {
@@ -25,12 +25,12 @@ void TileDefinition::LoadDefinitions(const char* path)
         }
         else
         {
-            printf("TileDefinition::LoadDefinitions    TileDefinitions config from file \"%s\"was invalid (missing root element)\n", path);
+            printf("TileDefinition::LoadDefinitions    TileDefinitions from \"%s\"was invalid (missing root element)\n", path);
         }
     }
     else
     {
-        printf("TileDefinition::LoadDefinitions    Failed to load TileDefinitions config from file \"%s\"\n", path);
+        printf("TileDefinition::LoadDefinitions    Failed to load TileDefinitions from \"%s\"\n", path);
     }
 }
 
