@@ -10,6 +10,7 @@
 #include "Engine/Core/Vertex_PCU.hpp"
 #include "Engine/Input/InputSystem.hpp"
 #include "Engine/Math/MathUtils.hpp"
+#include "Engine/Math/RandomNumberGenerator.hpp"
 #include "Engine/Math/RaycastUtils.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
@@ -17,8 +18,10 @@
 #include "Engine/Renderer/SpriteSheet.hpp"
 #include "Game/Game.hpp"
 #include "Game/GameCommon.hpp"
-#include "Game/Player.hpp"
+#include "Game/Definition/ActorDefinition.hpp"
+#include "Game/Framework/PlayerController.hpp"
 #include "Game/Definition/TileDefinition.hpp"
+#include "Game/Framework/ActorHandle.hpp"
 
 Map::Map(Game* game, const MapDefinition* definition): m_game(game), m_definition(definition)
 {
@@ -31,13 +34,19 @@ Map::Map(Game* game, const MapDefinition* definition): m_game(game), m_definitio
     CreateBuffers();
 
     /// Testing Adding Actors
-    AddActorsToMap(new Actor(Vec3(7.5f, 8.5f, 0.25f), EulerAngles(), Rgba8::RED, 0.75f, 0.35f, true));
+    /*AddActorsToMap(new Actor(Vec3(7.5f, 8.5f, 0.25f), EulerAngles(), Rgba8::RED, 0.75f, 0.35f, true));
     AddActorsToMap(new Actor(Vec3(8.5f, 8.5f, 0.125f), EulerAngles(), Rgba8::RED, 0.75f, 0.35f, true));
-    AddActorsToMap(new Actor(Vec3(9.5f, 8.5f, 0.0f), EulerAngles(), Rgba8::RED, 0.75f, 0.35f, true));
+    AddActorsToMap(new Actor(Vec3(9.5f, 8.5f, 0.0f), EulerAngles(), Rgba8::RED, 0.75f, 0.35f, true));*/
 
-    Actor* testActor = new Actor(Vec3(5.5f, 8.5f, 0.0f), EulerAngles(), Rgba8::BLUE, 0.125f, 0.0625, false);
-    AddActorsToMap(testActor);
-    m_game->m_player->BindActorToPlayer(testActor);
+    //Actor* testActor = new Actor(Vec3(5.5f, 8.5f, 0.0f), EulerAngles(), Rgba8::BLUE, 0.125f, 0.0625, false);
+    //AddActorsToMap(testActor);
+
+    /// Add Actors
+    for (SpawnInfo spawnInfo : m_definition->m_spawnInfos)
+    {
+        SpawnActor(spawnInfo);
+    }
+    SpawnPlayer(m_game->m_player);
     /// 
 }
 
@@ -45,13 +54,20 @@ Map::~Map()
 {
     printf("Map::Map    - Deleting Map from game \"%s\"\n", m_definition->m_name.c_str());
     m_texture = nullptr;
-    m_shader  = nullptr;
+
+    m_shader = nullptr;
 
     delete m_indexBuffer;
     m_indexBuffer = nullptr;
 
     delete m_vertexBuffer;
     m_vertexBuffer = nullptr;
+
+    for (Actor* actor : m_actors)
+    {
+        delete actor;
+        actor = nullptr;
+    }
 }
 
 void Map::CreateTiles()
@@ -153,7 +169,7 @@ void Map::CreateBuffers()
     printf("Map::Create       ‖ Creating Vertex Buffers...\n");
     /// TODO: Consider refactory those steps
     m_vertexBuffer = g_theRenderer->CreateVertexBuffer(sizeof(Vertex_PCUTBN), sizeof(Vertex_PCUTBN));
-    m_vertexBuffer->Resize((int)m_vertexes.size() * sizeof(Vertex_PCUTBN));
+    //m_vertexBuffer->Resize((int)m_vertexes.size() * sizeof(Vertex_PCUTBN));
     g_theRenderer->CopyCPUToGPU(m_vertexes.data(), (int)m_vertexes.size() * sizeof(Vertex_PCUTBN), m_vertexBuffer);
     printf("Map::Create       ‖ Creating Index Buffers...\n");
     m_indexBuffer = g_theRenderer->CreateIndexBuffer(sizeof(unsigned int));
@@ -171,6 +187,11 @@ bool Map::IsPositionInBounds(Vec3 position, const float tolerance) const
 IntVec2 Map::GetTileCoordsForWorldPos(const Vec2& worldCoords)
 {
     return IntVec2(static_cast<int>(floorf(worldCoords.x)), static_cast<int>(floorf(worldCoords.y)));
+}
+
+IntVec2 Map::GetTileCoordsForWorldPos(const Vec3& worldCoords)
+{
+    return GetTileCoordsForWorldPos(Vec2(worldCoords.x, worldCoords.y));
 }
 
 bool Map::AreCoordsInBounds(int x, int y) const
@@ -207,6 +228,15 @@ bool Map::GetTileIsInBound(const IntVec2& coords)
     return coords.x >= 0 && coords.y >= 0 && coords.x < m_dimensions.x && coords.y < m_dimensions.y;
 }
 
+bool Map::GetTileIsSolid(const IntVec2& coords)
+{
+    if (!GetTileIsInBound(coords))
+    {
+        return true;
+    }
+    return GetTile(coords)->GetTileDefinition()->m_isSolid;
+}
+
 void Map::Update()
 {
     /// Lighting
@@ -219,6 +249,16 @@ void Map::Update()
         HandleIncreaseSunIntensity();
         HandleDecreaseAmbientIntensity();
         HandleIncreaseAmbientIntensity();
+        AABB2 space = m_game->m_screenSpace;
+        space.m_maxs.y -= 30;
+        DebugAddScreenText(Stringf("  Sun Direction X: %0.2f [F2 / F3 to change] ", m_sunDirection.x), space, 12, 0, Rgba8::WHITE, Rgba8::WHITE);
+        space.m_maxs.y -= 14;
+        DebugAddScreenText(Stringf("  Sun Direction Y:                          ", m_sunDirection.y), space, 12, 0, Rgba8::WHITE, Rgba8::WHITE);
+        DebugAddScreenText(Stringf("                   %0.2f [F4 / F5 to change] ", m_sunDirection.y), space, 12, 0, Rgba8::WHITE, Rgba8::WHITE);
+        space.m_maxs.y -= 14;
+        DebugAddScreenText(Stringf("    Sun Intensity: %0.2f [F6 / F7 to change] ", m_sunIntensity), space, 12, 0, Rgba8::WHITE, Rgba8::WHITE);
+        space.m_maxs.y -= 14;
+        DebugAddScreenText(Stringf("Ambient Intensity: %0.2f [F8 / F9 to change] ", m_ambientIntensity), space, 12, 0, Rgba8::WHITE, Rgba8::WHITE);
     }
     ///
 
@@ -235,6 +275,11 @@ void Map::Update()
     /// 
     ColliedWithActors();
     ColliedActorsWithMap();
+}
+
+void Map::EndFrame()
+{
+    DeleteDestroyedActors();
 }
 
 void Map::ColliedWithActors()
@@ -309,16 +354,19 @@ void Map::Render()
     g_theRenderer->SetModelConstants(Mat44(), Rgba8::WHITE);
     g_theRenderer->BindShader(m_shader);
     g_theRenderer->BindTexture(m_texture);
-    g_theRenderer->SetLightConstants(m_sunDirection.GetNormalized(), m_sunIntensity, m_ambientIntensity);
+    g_theRenderer->SetLightConstants(m_sunDirection, m_sunIntensity, m_ambientIntensity);
     g_theRenderer->DrawIndexedVertexBuffer(m_vertexBuffer, m_indexBuffer, (int)m_indices.size());
     g_theRenderer->BindShader(nullptr);
     for (Actor* actor : m_actors)
     {
-        actor->Render();
+        if (actor->m_handle.IsValid() && actor->m_definition->m_visible)
+        {
+            actor->Render();
+        }
     }
 }
 
-RaycastResult3D Map::RaycastAll(const Vec3& start, const Vec3& direction, float distance) const
+RaycastResult3D Map::RaycastAll(const Vec3& start, const Vec3& direction, float distance)
 {
     std::vector<RaycastResult3D> results;
     std::vector<RaycastResult3D> resultImpact;
@@ -327,6 +375,7 @@ RaycastResult3D Map::RaycastAll(const Vec3& start, const Vec3& direction, float 
     RaycastResult3D result;
     results.push_back(RaycastWorldActors(start, direction, distance));
     results.push_back(RaycastWorldZ(start, direction, distance));
+    results.push_back(RaycastWorldXY(start, direction, distance));
     for (RaycastResult3D result_3d : results)
     {
         if (result_3d.m_didImpact)
@@ -348,15 +397,92 @@ RaycastResult3D Map::RaycastAll(const Vec3& start, const Vec3& direction, float 
     return result;
 }
 
-RaycastResult3D Map::RaycastWorldXY(const Vec3& start, const Vec3& direction, float distance) const
+RaycastResult3D Map::RaycastWorldXY(const Vec3& start, const Vec3& direction, float distance)
 {
-    UNUSED(start)
-    UNUSED(direction)
-    UNUSED(distance)
-    return RaycastResult3D();
+    RaycastResult3D result;
+    result.m_rayStartPos  = start;
+    result.m_rayFwdNormal = direction;
+    result.m_rayMaxLength = distance;
+
+    // Initialization Steps (once per Raycast)
+    IntVec2 tileCoords = GetTileCoordsForWorldPos(start);
+    if (GetTileIsSolid(tileCoords) && start.z < 1.0f)
+    {
+        result.m_didImpact    = true;
+        result.m_impactPos    = start;
+        result.m_impactDist   = 0.0f;
+        result.m_impactNormal = -direction; // Arbitrary choice for impact normal
+        return result;
+    }
+
+    float fwdDistPerXCrossing    = std::abs(1.0f / direction.x);
+    int   tileStepDirectionX     = (direction.x < 0) ? -1 : 1;
+    float xAtFirstXCrossing      = (tileStepDirectionX > 0) ? (std::floor(start.x) + 1.0f) : std::floor(start.x);
+    float xDistToFirstXCrossing  = (xAtFirstXCrossing - start.x) * tileStepDirectionX;
+    float fwdDistAtNextXCrossing = xDistToFirstXCrossing * fwdDistPerXCrossing;
+
+    float fwdDistPerYCrossing    = std::abs(1.0f / direction.y);
+    int   tileStepDirectionY     = (direction.y < 0) ? -1 : 1;
+    float yAtFirstYCrossing      = (tileStepDirectionY > 0) ? (std::floor(start.y) + 1.0f) : std::floor(start.y);
+    float yDistToFirstYCrossing  = (yAtFirstYCrossing - start.y) * tileStepDirectionY;
+    float fwdDistAtNextYCrossing = yDistToFirstYCrossing * fwdDistPerYCrossing;
+
+    float fwdDistPerZCrossing    = fabsf(1.0f / direction.z);
+    int   tileStepDirectionZ     = (direction.z < 0) ? -1 : 1;
+    float zAtFirstZCrossing      = (tileStepDirectionZ > 0) ? (floorf(start.z) + 1.0f) : floorf(start.z);
+    float zDistToFirstZCrossing  = (zAtFirstZCrossing - start.z) * tileStepDirectionZ;
+    float fwdDistAtNextZCrossing = zDistToFirstZCrossing * fwdDistPerZCrossing;
+
+    // Main Raycast Loop (after Initialization)
+    while (true)
+    {
+        if (fwdDistAtNextXCrossing < fwdDistAtNextYCrossing)
+        {
+            if (fwdDistAtNextXCrossing > distance)
+            {
+                break; // Ray missed
+            }
+            tileCoords.x += tileStepDirectionX;
+            float impactZ = start.z + direction.z * fwdDistAtNextXCrossing; // Calculate Z direction based on X direction
+            if (GetTileIsSolid(tileCoords) && impactZ >= 0.0f && impactZ <= 1.0f)
+            {
+                result.m_didImpact    = true;
+                result.m_impactDist   = fwdDistAtNextXCrossing;
+                result.m_impactPos    = start + direction * fwdDistAtNextXCrossing;
+                result.m_impactNormal = Vec3(static_cast<float>(-tileStepDirectionX), 0.0f, 0.f);
+                return result;
+            }
+            fwdDistAtNextXCrossing += fwdDistPerXCrossing;
+            fwdDistAtNextZCrossing += fwdDistPerZCrossing; // Increase Z direction based on X direction
+        }
+        else
+        {
+            if (fwdDistAtNextYCrossing > distance)
+            {
+                break; // Ray missed
+            }
+            tileCoords.y += tileStepDirectionY;
+            float impactZ = start.z + direction.z * fwdDistAtNextYCrossing;
+            if (GetTileIsSolid(tileCoords) && (impactZ >= 0.0f && impactZ <= 1.0f))
+            {
+                result.m_didImpact    = true;
+                result.m_impactDist   = fwdDistAtNextYCrossing;
+                result.m_impactPos    = start + direction * fwdDistAtNextYCrossing;
+                result.m_impactNormal = Vec3(0.0f, static_cast<float>(-tileStepDirectionY), 0.f);
+                return result;
+            }
+            fwdDistAtNextYCrossing += fwdDistPerYCrossing;
+            fwdDistAtNextZCrossing += fwdDistPerZCrossing;
+        }
+    }
+
+    // No impact, ray missed
+    result.m_impactDist = distance;
+    result.m_impactPos  = start + direction * distance;
+    return result;
 }
 
-RaycastResult3D Map::RaycastWorldZ(const Vec3& start, const Vec3& direction, float maxDistance) const
+RaycastResult3D Map::RaycastWorldZ(const Vec3& start, const Vec3& direction, float maxDistance)
 {
     RaycastResult3D result;
     result.m_rayFwdNormal = direction;
@@ -394,10 +520,19 @@ RaycastResult3D Map::RaycastWorldZ(const Vec3& start, const Vec3& direction, flo
         }
     }
 
+    if (result.m_didImpact)
+    {
+        IntVec2 tileCoords = GetTileCoordsForWorldPos(Vec2(result.m_impactPos.x, result.m_impactPos.y));
+        if (!GetTileIsInBound(tileCoords))
+        {
+            result.m_didImpact = false;
+        }
+    }
+
     return result;
 }
 
-RaycastResult3D Map::RaycastWorldActors(const Vec3& start, const Vec3& direction, float distance) const
+RaycastResult3D Map::RaycastWorldActors(const Vec3& start, const Vec3& direction, float distance)
 {
     RaycastResult3D result;
 
@@ -411,10 +546,6 @@ RaycastResult3D Map::RaycastWorldActors(const Vec3& start, const Vec3& direction
         }
     }
     return result;
-}
-
-void Map::RenderRaycastResult(const RaycastResult3D& result)
-{
 }
 
 void Map::HandleDecreaseSunDirectionX()
@@ -489,12 +620,148 @@ void Map::HandleIncreaseAmbientIntensity()
     }
 }
 
-bool Map::AddActorsToMap(Actor* actor)
+Actor* Map::AddActorsToMap(Actor* actor)
 {
-    if (actor)
+    if (!actor)
+        return nullptr;
+    unsigned int newIndex = 0;
+    m_actors.push_back(nullptr);
+    ++m_nextActorUID;
+    ActorHandle handle(m_nextActorUID, newIndex);
+    actor->m_map       = this;
+    actor->m_handle    = handle;
+    m_actors[newIndex] = actor;
+    return actor;
+}
+
+Actor* Map::SpawnActor(const SpawnInfo& spawnInfo)
+{
+    unsigned int newIndex = 0;
+    newIndex              = (unsigned int)m_actors.size();
+    m_actors.push_back(nullptr);
+    ++m_nextActorUID;
+    ActorHandle handle(m_nextActorUID, newIndex);
+    Actor*      actor  = new Actor(spawnInfo);
+    actor->m_handle    = handle;
+    actor->m_map       = this;
+    m_actors[newIndex] = actor;
+    return actor;
+}
+
+Actor* Map::SpawnPlayer(PlayerController* playerController)
+{
+    SpawnInfo spawnInfo;
+    spawnInfo.m_actorName = "Marine";
+    std::vector<Actor*> spawnPoints;
+    GetActorsByName(spawnPoints, "SpawnPoint");
+    Actor* spawnPoint       = spawnPoints[g_rng->RollRandomIntInRange(0, (int)spawnPoints.size() - 1)];
+    spawnInfo.m_position    = spawnPoint->m_position;
+    spawnInfo.m_orientation = Vec3(spawnPoint->m_orientation);
+    spawnInfo.m_velocity    = spawnPoint->m_velocity;
+    Actor* playerActor      = SpawnActor(spawnInfo);
+    playerController->m_map = this;
+    playerController->Possess(playerActor->m_handle);
+    return playerActor;
+}
+
+Actor* Map::GetActorByHandle(const ActorHandle handle) const
+{
+    if (!handle.IsValid())
     {
-        m_actors.push_back(actor);
-        return true;
+        return nullptr;
     }
-    return false;
+    unsigned int index = handle.GetIndex();
+    if (index >= m_actors.size())
+    {
+        return nullptr;
+    }
+    Actor* actor = m_actors[index];
+    if (actor == nullptr)
+    {
+        return nullptr;
+    }
+    if (actor->m_handle != handle)
+    {
+        return nullptr;
+    }
+    return actor;
+}
+
+Actor* Map::GetActorByName(const std::string& name) const
+{
+    for (Actor* actor : m_actors)
+    {
+        if (actor && actor->m_handle.IsValid())
+        {
+            if (actor->m_definition->m_name == name)
+            {
+                return actor;
+            }
+        }
+    }
+    return nullptr;
+}
+
+Actor* Map::GetClosestVisibleEnemy()
+{
+    return nullptr;
+}
+
+void Map::GetActorsByName(std::vector<Actor*>& inActors, const std::string& name) const
+{
+    for (Actor* actor : m_actors)
+    {
+        if (actor && actor->m_handle.IsValid())
+        {
+            if (actor->m_definition->m_name == name)
+            {
+                inActors.push_back(actor);
+            }
+        }
+    }
+}
+
+Actor* Map::DebugPossessNext()
+{
+    PlayerController* playerController = m_game->m_player;
+    if (!playerController)
+        return nullptr;
+    Actor* playerControlledActor = playerController->GetActor();
+    if (playerControlledActor == nullptr)
+    {
+        for (Actor* actor : m_actors)
+        {
+            if (actor && actor->m_handle.IsValid() && actor->m_definition->m_canBePossessed)
+            {
+                playerController->Possess(actor->m_handle);
+                return actor;
+            }
+        }
+    }
+    unsigned int index = playerControlledActor->m_handle.GetIndex();
+    for (unsigned int i = index + 1; i <= m_actors.size() + index; i++)
+    {
+        unsigned int desiredIndex = i % (int)m_actors.size();
+
+        if (m_actors[desiredIndex] && m_actors[desiredIndex]->m_handle.IsValid() && m_actors[desiredIndex]->m_definition->m_canBePossessed)
+        {
+            Actor* desiredControlledActor = m_actors[desiredIndex];
+            playerController->Possess(desiredControlledActor->m_handle);
+            return desiredControlledActor;
+        }
+    }
+    return nullptr;
+}
+
+void Map::DeleteDestroyedActors()
+{
+    for (Actor* actor : m_actors)
+    {
+        if (actor && actor->m_handle.IsValid() && actor->m_bIsGarbage)
+        {
+            unsigned int index = actor->m_handle.GetIndex();
+            delete actor;
+            m_actors[index] = nullptr;
+        }
+    }
 }
