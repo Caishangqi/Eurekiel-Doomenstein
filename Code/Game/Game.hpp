@@ -1,10 +1,11 @@
 ﻿#pragma once
 #include "GameCommon.hpp"
 #include "Engine/Core/EngineCommon.hpp"
+#include "Engine/Core/EventSystem.hpp"
 #include "Engine/Math/AABB2.hpp"
 
 class Map;
-class Player;
+class PlayerController;
 class Clock;
 class Prop;
 
@@ -24,6 +25,7 @@ public:
     ~Game();
     void Render() const;
     void Update();
+    void EndFrame();
 
     /// Event Handle
     STATIC bool GameStartEvent(EventArgs& args);
@@ -70,8 +72,8 @@ public: /// Game State
     Clock* m_clock = nullptr;
     /// 
 
-    /// Player
-    Player* m_player = nullptr;
+    /// PlayerController
+    PlayerController* m_player = nullptr;
     /// 
 
     /// Cube
@@ -80,7 +82,9 @@ public: /// Game State
     ///
 
     /// Test Obj
-    Prop* m_testProp = nullptr;
+    Prop* m_testProp       = nullptr;
+    bool  m_bEnableTestObj = false;
+    bool  m_bEnableGrid    = false;
     /// 
 
     /// Balls
