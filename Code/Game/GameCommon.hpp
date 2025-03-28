@@ -3,6 +3,7 @@
 
 /// Whether or not enable cosmic circle (developer)
 #define COSMIC
+//#define DEBUG_GRID
 
 struct Vertex_PCU;
 struct Rgba8;
