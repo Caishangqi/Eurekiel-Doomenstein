@@ -2,10 +2,12 @@
 
 #include "App.hpp"
 #include "GameCommon.hpp"
-#include "Player.hpp"
+#include "Framework/PlayerController.hpp"
 #include "Prop.hpp"
+#include "Definition/ActorDefinition.hpp"
 #include "Definition/MapDefinition.hpp"
 #include "Definition/TileDefinition.hpp"
+#include "Definition/WeaponDefinition.hpp"
 #include "Engine/Core/Clock.hpp"
 #include "Engine/Core/EngineCommon.hpp"
 
@@ -24,6 +26,8 @@ Game::Game()
 {
     MapDefinition::LoadDefinitions("Data/Definitions/MapDefinitions.xml");
     TileDefinition::LoadDefinitions("Data/Definitions/TileDefinitions.xml");
+    ActorDefinition::LoadDefinitions("Data/Definitions/ActorDefinitions.xml");
+    WeaponDefinition::LoadDefinitions("Data/Definitions/WeaponDefinitions.xml");
 
     /// Event Register
     g_theEventSystem->SubscribeEventCallbackFunction("GameStartEvent", GameStartEvent);
@@ -150,7 +154,7 @@ Game::Game()
     ///
 
     /// Debug Drawing
-
+#ifdef DEBUG_GRID
     // Arrows
     DebugAddWorldArrow(Vec3(1, 0, 0), Vec3(0, 0, 0), 0.12f, -1, Rgba8::RED, Rgba8::RED, DebugRenderMode::USE_DEPTH);
     DebugAddWorldArrow(Vec3(0, 1, 0), Vec3(0, 0, 0), 0.12f, -1, Rgba8::GREEN, Rgba8::GREEN, DebugRenderMode::USE_DEPTH);
@@ -170,6 +174,8 @@ Game::Game()
     transformZ.AppendXRotation(-90.f);
     transformZ.AppendZRotation(180.f);
     DebugAddWorldText("z - up", transformZ, 1.f, Rgba8::BLUE, Rgba8::BLUE, DebugRenderMode::USE_DEPTH, Vec2(0.5, 0.5), -1);
+
+#endif
 
     /// Game State
     g_theInput->SetCursorMode(CursorMode::POINTER);
@@ -198,10 +204,12 @@ Game::~Game()
     POINTER_SAFE_DELETE(m_ball)
     POINTER_SAFE_DELETE(m_cube_1)
     POINTER_SAFE_DELETE(m_cube)
+    POINTER_SAFE_DELETE(m_map)
     POINTER_SAFE_DELETE(m_player)
+    POINTER_SAFE_DELETE(m_testProp)
     POINTER_SAFE_DELETE(m_screenCamera)
     POINTER_SAFE_DELETE(m_worldCamera)
-    POINTER_SAFE_DELETE(m_worldCamera)
+    MapDefinition::ClearDefinitions();
 }
 
 
@@ -217,9 +225,11 @@ void Game::Render() const
         g_theRenderer->EndCamera(*m_player->m_camera);
         g_theRenderer->BindShader(nullptr);
         /// Grid
-        RenderGrids();
+        if (m_bEnableGrid)
+            RenderGrids();
         /// Props
-        RenderProps();
+        if (m_bEnableTestObj)
+            RenderProps();
         DebugRenderWorld(*g_theGame->m_player->m_camera);
         DebugRenderScreen(*g_theGame->m_screenCamera);
     }
@@ -287,11 +297,11 @@ void Game::Update()
         g_theInput->SetCursorMode(CursorMode::POINTER);
     }
 
-    /// Player
+    /// PlayerController
     if (m_player)
     {
         m_player->Update(Clock::GetSystemClock().GetDeltaSeconds());
-        DebugAddMessage(Stringf("Player position: %.2f, %.2f, %.2f", m_player->m_position.x, m_player->m_position.y, m_player->m_position.z), 0);
+        DebugAddMessage(Stringf("PlayerController position: %.2f, %.2f, %.2f", m_player->m_position.x, m_player->m_position.y, m_player->m_position.z), 0);
     }
     ///
 
@@ -340,22 +350,30 @@ void Game::Update()
     HandleKeyBoardEvent(deltaTime);
 }
 
+void Game::EndFrame()
+{
+    if (m_map)
+        m_map->EndFrame();
+}
+
 bool Game::GameStartEvent(EventArgs& args)
 {
+    UNUSED(args)
     printf("Event::GameStartEvent    Starting game...\n");
     Game* m_game = g_theGame;
     m_game->EnterState(GameState::PLAYING);
     g_theInput->SetCursorMode(CursorMode::FPS);
 
-    m_game->m_player = new Player(m_game, Vec3(2.5f, 8.5, 0.5f));
-
     std::string defaultMapName = g_gameConfigBlackboard.GetValue("defaultMap", "Default");
-    m_game->m_map              = new Map(m_game, MapDefinition::GetByName(defaultMapName));
+    /// TODO: Consider move the player controller instatiate into Map constructor
+    m_game->m_player = new PlayerController(m_game->m_map, Vec3(2.5f, 8.5, 0.5f));
+    m_game->m_map    = new Map(m_game, MapDefinition::GetByName(defaultMapName));
     return true;
 }
 
 bool Game::GameExitEvent(EventArgs& args)
 {
+    UNUSED(args)
     printf("Event::GameStartEvent    Exiting game...\n");
     Game* m_game = g_theGame;
 
@@ -377,6 +395,7 @@ void Game::EnterState(GameState state)
 
 void Game::ExitState(GameState state)
 {
+    UNUSED(state)
 }
 
 
