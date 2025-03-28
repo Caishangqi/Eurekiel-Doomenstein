@@ -2,7 +2,7 @@
 
 #include "Engine/Window/Window.hpp"
 #include "Game.hpp"
-#include "Player.hpp"
+#include "Framework/PlayerController.hpp"
 #include "Engine/Audio/AudioSystem.hpp"
 #include "Engine/Core/Clock.hpp"
 #include "Engine/Core/EngineCommon.hpp"
@@ -173,13 +173,9 @@ bool App::Event_ConsoleStartup(EventArgs& args)
                              "Q/E     - Roll\n"
                              "Z/C     - Elevate\n"
                              "Shift   - Sprint\n"
-                             "1       - Spawn Line\n"
-                             "2       - Spawn Point\n"
-                             "3       - Spawn Wireframe Sphere\n"
-                             "4       - Spawn Basis\n"
-                             "5       - Spawn Billboarded Text\n"
-                             "6       - Spawn Wireframe Cylinder\n"
-                             "7       - Add Message\n"
+                             "LMB     - 10 Unit Raycast towards camera orientation\n"
+                             "RMB     - 0.25 Unit Raycast towards camera orientation\n"
+                             "F1      - Posses Test Actor \n"
                              "H       - Reset position and orientation to zero\n"
                              "N       - Start the Game (In Menu)\n"
                              "ESC     - Quit\n"
@@ -276,6 +272,7 @@ void App::EndFrame()
     g_theAudio->EndFrame();
     g_theEventSystem->EndFrame();
     g_theDevConsole->EndFrame();
+    g_theGame->EndFrame();
 
     if (m_isPendingRestart)
     {
@@ -298,16 +295,16 @@ void App::LoadGameConfig(const char* filename)
         if (rootElement)
         {
             g_gameConfigBlackboard.PopulateFromXmlElementAttributes(*rootElement);
-            DebuggerPrintf("App::LoadGameConfig    Game config from file \"%s\" was loaded\n", filename);
+            DebuggerPrintf("App::LoadGameConfig    Game from \"%s\" was loaded\n", filename);
         }
         else
         {
-            DebuggerPrintf("App::LoadGameConfig    Game config from file \"%s\"was invalid (missing root element)\n", filename);
+            DebuggerPrintf("App::LoadGameConfig    Game from \"%s\"was invalid (missing root element)\n", filename);
         }
     }
     else
     {
-        DebuggerPrintf("App::LoadGameConfig    Failed to load game config from file \"%s\"\n", filename);
+        DebuggerPrintf("App::LoadGameConfig    Failed to load game from \"%s\"\n", filename);
     }
 }
 
