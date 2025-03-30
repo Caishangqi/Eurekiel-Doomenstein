@@ -27,6 +27,7 @@ Game::Game()
     MapDefinition::LoadDefinitions("Data/Definitions/MapDefinitions.xml");
     TileDefinition::LoadDefinitions("Data/Definitions/TileDefinitions.xml");
     ActorDefinition::LoadDefinitions("Data/Definitions/ActorDefinitions.xml");
+    ActorDefinition::LoadDefinitions("Data/Definitions/ProjectileActorDefinitions.xml");
     WeaponDefinition::LoadDefinitions("Data/Definitions/WeaponDefinitions.xml");
 
     /// Event Register
@@ -153,6 +154,9 @@ Game::Game()
     }
     ///
 
+    /// Player controller
+    m_player = new PlayerController(m_map, Vec3(2.5f, 8.5, 0.5f));
+
     /// Debug Drawing
 #ifdef DEBUG_GRID
     // Arrows
@@ -209,6 +213,7 @@ Game::~Game()
     POINTER_SAFE_DELETE(m_testProp)
     POINTER_SAFE_DELETE(m_screenCamera)
     POINTER_SAFE_DELETE(m_worldCamera)
+    POINTER_SAFE_DELETE(m_player)
     MapDefinition::ClearDefinitions();
 }
 
@@ -365,9 +370,7 @@ bool Game::GameStartEvent(EventArgs& args)
     g_theInput->SetCursorMode(CursorMode::FPS);
 
     std::string defaultMapName = g_gameConfigBlackboard.GetValue("defaultMap", "Default");
-    /// TODO: Consider move the player controller instatiate into Map constructor
-    m_game->m_player = new PlayerController(m_game->m_map, Vec3(2.5f, 8.5, 0.5f));
-    m_game->m_map    = new Map(m_game, MapDefinition::GetByName(defaultMapName));
+    m_game->m_map              = new Map(m_game, MapDefinition::GetByName(defaultMapName));
     return true;
 }
 
@@ -379,9 +382,6 @@ bool Game::GameExitEvent(EventArgs& args)
 
     delete m_game->m_map;
     m_game->m_map = nullptr;
-
-    delete m_game->m_player;
-    m_game->m_player = nullptr;
 
     m_game->EnterState(GameState::ATTRACT);
     g_theInput->SetCursorMode(CursorMode::POINTER);
