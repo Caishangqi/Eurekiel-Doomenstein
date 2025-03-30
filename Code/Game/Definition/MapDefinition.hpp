@@ -21,6 +21,11 @@ struct SpawnInfo
 public:
     SpawnInfo() = default;
 
+    SpawnInfo(std::string actorName, std::string faction, Vec3 position, Vec3 orientation, Vec3 velocity) : m_actorName(actorName), m_faction(faction), m_position(position),
+                                                                                                            m_orientation(orientation), m_velocity(velocity)
+    {
+    }
+
 public:
     std::string m_actorName = "Default";
     std::string m_faction   = "NEUTRAL";
