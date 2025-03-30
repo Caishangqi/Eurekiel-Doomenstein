@@ -1,13 +1,15 @@
 ﻿#pragma once
 #include "Engine/Math/Vec3.hpp"
 
+class Actor;
 class WeaponDefinition;
 
 class Weapon
 {
+    friend class Actor;
 public:
     Weapon() = delete;
-    Weapon(const WeaponDefinition* definition);
+    Weapon(const WeaponDefinition* definition, Actor* owner);
     ~Weapon();
 
 public:
@@ -16,8 +18,18 @@ public:
     /// ignored in all raycast and collision checks.
     void Fire();
     /// This, and other utility methods, will be helpful for randomizing weapons with a cone.
-    Vec3 GetRandomDirectionInCone();
+    /// @param weaponOrientation 
+    /// @param degreeOfVariation 
+    /// @return 
+    Vec3        GetRandomDirectionInCone(Vec3 weaponOrientation, float degreeOfVariation);
+    /// 
+    /// @param weaponOrientation 
+    /// @param degreeOfVariation 
+    /// @return 
+    EulerAngles GetRandomDirectionInCone(EulerAngles weaponOrientation, float degreeOfVariation);
 
-private:
-    WeaponDefinition* m_definition = nullptr;
+protected:
+    Actor*                  m_owner        = nullptr;
+    const WeaponDefinition* m_definition   = nullptr;
+    float                   m_lastFireTime = 0.f;
 };
