@@ -200,7 +200,6 @@
     <ClInclude Include="..\..\Run\Data\Shaders\Diffuse.hlsl" />
     <ClCompile Include="Definition\ActorDefinition.cpp" />
     <ClCompile Include="Definition\MapDefinition.cpp" />
-    <ClCompile Include="Definition\ProjectileActorDefinition.cpp" />
     <ClCompile Include="Definition\TileDefinition.cpp" />
     <ClCompile Include="Definition\WeaponDefinition.cpp" />
     <ClCompile Include="Framework\ActorHandle.cpp" />
@@ -297,7 +296,6 @@
     <ClInclude Include="App.hpp" />
     <ClInclude Include="Definition\ActorDefinition.hpp" />
     <ClInclude Include="Definition\MapDefinition.hpp" />
-    <ClInclude Include="Definition\ProjectileActorDefinition.hpp" />
     <ClInclude Include="Definition\TileDefinition.hpp" />
     <ClInclude Include="Definition\WeaponDefinition.hpp" />
     <ClInclude Include="EngineBuildPreferences.hpp" />
