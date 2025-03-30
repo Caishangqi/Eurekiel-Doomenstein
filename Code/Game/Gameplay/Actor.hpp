@@ -47,6 +47,7 @@ public:
     float            m_health     = 1.f; // Current health.
     Actor*           m_owner      = nullptr; //Only applies to projectile actors. Actor that fired this projectile, for purposes of collision filtering.
     float            m_dead       = 0.f; // Any data needed to track if and how long we have been dead.
+    bool             m_bIsDead    = false;
     bool             m_bIsGarbage = false; // If true, this actor is no longer needed and can be safely deleted.
 
     // A reference to our default AI controller, if any. Used to keep track of our AI controller
@@ -62,7 +63,9 @@ public:
 private:
     ZCylinder               m_collisionZCylinder;
     std::vector<Vertex_PCU> m_vertexes;
+    std::vector<Vertex_PCU> m_vertexesCone;
     std::vector<Vertex_PCU> m_vertexesWireframe;
+    std::vector<Vertex_PCU> m_vertexesConeWireframe;
     Texture*                m_texture = nullptr;
 
 public:
@@ -100,8 +103,11 @@ public:
     /// @param tileXYZBound 
     void OnColliedEnter(AABB3& tileXYZBound);
     /// Take damage, handle dying due to health dropping below zero, and notify our controller of the source.
-    /// @param damage 
-    void Damage(float damage);
+    /// @param damage
+    /// @param instigator 
+    void Damage(float damage, ActorHandle instigator);
+    void SwitchInventory(unsigned int index);
+    void Attack(); // Fire our currently equipped weapon.
 
     void  Render() const;
     Mat44 GetModelToWorldTransform() const;

@@ -8,6 +8,7 @@
 #include "Engine/Math/FloatRange.hpp"
 #include "Engine/Math/Mat44.hpp"
 #include "Engine/Math/MathUtils.hpp"
+#include "Engine/Math/RandomNumberGenerator.hpp"
 #include "Engine/Renderer/Renderer.hpp"
 #include "Game/GameCommon.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
@@ -39,15 +40,17 @@ Actor::Actor(const SpawnInfo& spawnInfo)
     }
     m_definition         = definition;
     m_physicalHeight     = definition->m_physicsHeight;
+    m_health             = definition->m_health;
     m_physicalRadius     = definition->m_physicsRadius;
     m_position           = spawnInfo.m_position;
+    m_velocity           = spawnInfo.m_velocity;
     m_orientation        = EulerAngles(spawnInfo.m_orientation);
     m_collisionZCylinder = ZCylinder(spawnInfo.m_position, m_physicalRadius, m_physicalHeight, true);
     for (std::string items : definition->m_inventory)
     {
         const WeaponDefinition* weapon = WeaponDefinition::GetByName(items);
         if (weapon)
-            m_weapons.push_back(new Weapon(weapon));
+            m_weapons.push_back(new Weapon(weapon, this));
     }
     /// AI Controller
     if (m_definition->m_aiEnabled)
@@ -82,11 +85,17 @@ Actor::~Actor()
 void Actor::Update(float deltaSeconds)
 {
     UNUSED(deltaSeconds)
+    if (m_bIsDead)
+        m_dead += deltaSeconds;
+    if (m_dead >= 2.0f)
+        m_bIsGarbage = true;
+
     /// Shitty code :D
     m_collisionZCylinder.m_center.x = m_position.x;
     m_collisionZCylinder.m_center.y = m_position.y;
     m_collisionZCylinder.m_center.z = m_position.z + m_physicalHeight / 2.0f;
-    if (m_definition->m_simulated)
+
+    if (m_definition->m_simulated && m_dead == 0.f)
     {
         UpdatePhysics(deltaSeconds);
     }
@@ -115,16 +124,15 @@ void Actor::AddForce(Vec3 force)
 
 void Actor::AddImpulse(Vec3 impulse)
 {
+    m_velocity += impulse;
 }
 
 void Actor::MoveInDirection(Vec3 direction, float speed)
 {
-    // Normalize the direction to unit vector
     Vec3 dirNormalized = direction.GetNormalized();
-    // achieve 'speed' as velocity while overcoming drag
+    // 'speed' as velocity while overcoming drag
     float dragValue = m_definition->m_drag;
     Vec3  force     = dirNormalized * (speed * dragValue);
-
     AddForce(force);
 }
 
@@ -144,7 +152,53 @@ ZCylinder& Actor::GetColliderZCylinder()
 
 void Actor::OnColliedEnter(Actor* other)
 {
-    if (!other->m_bIsStatic)
+    /// Handle projectile
+    if (m_bIsDead || other->m_bIsDead)
+    {
+        return;
+    }
+    // if both are projectile
+    if (other->m_owner && m_owner)
+        return;
+    // if self are projectile other is not
+    if (m_owner && !other->m_owner)
+    {
+        if (m_owner == other)
+        {
+            return;
+        }
+        else
+        {
+            float randomDamage = g_rng->RollRandomFloatInRange(m_definition->m_damageOnCollide.m_min, m_definition->m_damageOnCollide.m_max);
+            other->Damage(randomDamage, m_handle);
+            Vec3 forward, left, right;
+            m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
+            other->AddImpulse(m_definition->m_impulseOnCollied * forward);
+            m_bIsDead = true;
+        }
+        return;
+    }
+    // if self not projectile other is
+    if (!m_owner && other->m_owner)
+    {
+        if (this == other->m_owner)
+        {
+            return;
+        }
+        else
+        {
+            float randomDamage = g_rng->RollRandomFloatInRange(other->m_definition->m_damageOnCollide.m_min, other->m_definition->m_damageOnCollide.m_max);
+            Damage(randomDamage, other->m_handle);
+            Vec3 forward, left, right;
+            other->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
+            AddImpulse(other->m_definition->m_impulseOnCollied * forward);
+            other->m_bIsDead = true;
+        }
+        return;
+    }
+
+    ///
+    if (other->m_definition->m_collidesWithActors)
     {
         float A_bottom = m_position.z;
         float A_top    = m_position.z + m_physicalHeight;
@@ -185,8 +239,10 @@ void Actor::OnColliedEnter(AABB2& tileXYBound)
 {
     if (!m_bIsStatic)
     {
-        Vec2 pos2D = Vec2(m_position.x, m_position.y);
-        PushDiscOutOfAABB2D(pos2D, m_physicalRadius, tileXYBound);
+        Vec2 pos2D         = Vec2(m_position.x, m_position.y);
+        bool colliedWithXY = PushDiscOutOfAABB2D(pos2D, m_physicalRadius, tileXYBound);
+        if (colliedWithXY && m_definition->m_dieOnCollide)
+            m_bIsDead = true;
         m_position = Vec3(pos2D.x, pos2D.y, m_position.z);
     }
 }
@@ -198,7 +254,11 @@ void Actor::OnColliedEnter(AABB3& tileXYZBound)
         float zCylinderMaxZ, zCylinderMinZ;
         zCylinderMaxZ = m_position.z + m_physicalHeight;
         zCylinderMinZ = m_position.z;
-
+        if (zCylinderMaxZ > tileXYZBound.m_maxs.z || zCylinderMinZ < tileXYZBound.m_mins.z)
+        {
+            if (m_definition->m_dieOnCollide)
+                m_bIsDead = true;
+        }
         if (zCylinderMaxZ > tileXYZBound.m_maxs.z)
         {
             zCylinderMaxZ = tileXYZBound.m_maxs.z;
@@ -212,8 +272,32 @@ void Actor::OnColliedEnter(AABB3& tileXYZBound)
     }
 }
 
-void Actor::Damage(float damage)
+void Actor::Damage(float damage, ActorHandle instigator)
 {
+    m_health -= damage;
+    printf("Actor::Damage    Actor %s was Damaged, health now %f\n", m_definition->m_name.c_str(), m_health);
+    if (m_health <= 0.f)
+        m_bIsDead = true;
+    if (m_aiController)
+        m_aiController->DamagedBy(instigator);
+}
+
+void Actor::SwitchInventory(unsigned int index)
+{
+    if (index < m_weapons.size())
+    {
+        if (m_currentWeapon != m_weapons[index])
+        {
+            m_currentWeapon = m_weapons[index];
+            printf("Actor::SwitchInventory    Weapon switched to %s\n", m_currentWeapon->m_definition->m_name.c_str());
+        }
+    }
+}
+
+void Actor::Attack()
+{
+    if (m_currentWeapon)
+        m_currentWeapon->Fire();
 }
 
 void Actor::Render() const
@@ -228,9 +312,13 @@ void Actor::Render() const
     g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
     g_theRenderer->BindTexture(m_texture);
     g_theRenderer->DrawVertexArray(m_vertexes);
+    if (!m_owner)
+        g_theRenderer->DrawVertexArray(m_vertexesCone);
 
     g_theRenderer->SetRasterizerMode(RasterizerMode::WIREFRAME_CULL_BACK);
     g_theRenderer->DrawVertexArray(m_vertexesWireframe);
+    if (!m_owner)
+        g_theRenderer->DrawVertexArray(m_vertexesConeWireframe);
     g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_BACK);
 }
 
@@ -250,6 +338,7 @@ void Actor::OnPossessed(Controller* controller)
 
 void Actor::OnUnpossessed()
 {
+    m_controller = nullptr;
     if (m_aiController)
     {
         m_aiController->Possess(m_handle);
@@ -269,6 +358,6 @@ void Actor::InitLocalVertex()
     AddVertsForCylinderZ3D(m_vertexesWireframe, localCylinder, m_color, AABB2::ZERO_TO_ONE);
     Vec3 localConeStartPoint = Vec3(m_definition->m_physicsRadius - 0.05f, 0, m_definition->m_eyeHeight * 0.85f);
     Vec3 localConeEndPoint   = localConeStartPoint + Vec3(m_definition->m_physicsRadius / 2.f, 0, 0);
-    AddVertsForCone3D(m_vertexes, localConeEndPoint, localConeStartPoint, m_definition->m_physicsHeight / 5.0f, m_color * 0.5f);
-    AddVertsForCone3D(m_vertexesWireframe, localConeEndPoint, localConeStartPoint, m_definition->m_physicsHeight / 5.0f, m_color);
+    AddVertsForCone3D(m_vertexesCone, localConeEndPoint, localConeStartPoint, m_definition->m_physicsHeight / 5.0f, m_color * 0.5f);
+    AddVertsForCone3D(m_vertexesConeWireframe, localConeEndPoint, localConeStartPoint, m_definition->m_physicsHeight / 5.0f, m_color);
 }
