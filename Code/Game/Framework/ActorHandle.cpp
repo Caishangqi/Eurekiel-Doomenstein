@@ -31,10 +31,10 @@ unsigned int ActorHandle::GetIndex() const
 
 bool ActorHandle::operator==(const ActorHandle& other) const
 {
-    return GetIndex() == other.GetIndex();
+    return m_data == other.m_data;
 }
 
 bool ActorHandle::operator!=(const ActorHandle& other) const
 {
-    return GetIndex() != other.GetIndex();
+    return m_data != other.m_data;
 }
