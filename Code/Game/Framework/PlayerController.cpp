@@ -8,7 +8,9 @@
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
 #include "../Gameplay/Map.hpp"
+#include "Game/Game.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
+#include "Game/Gameplay/Weapon.hpp"
 
 PlayerController::PlayerController(Map* map): Controller(map)
 {
@@ -73,11 +75,18 @@ void PlayerController::UpdateInput(float deltaSeconds)
         m_bCameraMode = !m_bCameraMode;
     }
 
+    if (g_theGame->m_currentState != GameState::PLAYING)
+        return;
+
     if (!m_bCameraMode)
     {
         Actor*      possessActor            = GetActor();
         EulerAngles possessActorOrientation = possessActor->m_orientation;
-
+        float       actorSpeed              = possessActor->m_definition->m_walkSpeed;
+        if (g_theInput->IsKeyDown(KEYCODE_LEFT_SHIFT))
+        {
+            actorSpeed = possessActor->m_definition->m_runSpeed;
+        }
         possessActorOrientation.m_yawDegrees += -cursorDelta.x * 0.125f;
         possessActorOrientation.m_pitchDegrees += -cursorDelta.y * 0.125f;
 
@@ -88,22 +97,31 @@ void PlayerController::UpdateInput(float deltaSeconds)
 
         if (g_theInput->IsKeyDown('W'))
         {
-            possessActor->MoveInDirection(forward, possessActor->m_definition->m_walkSpeed);
+            possessActor->MoveInDirection(forward, actorSpeed);
         }
 
         if (g_theInput->IsKeyDown('S'))
         {
-            possessActor->MoveInDirection(-forward, possessActor->m_definition->m_walkSpeed);
+            possessActor->MoveInDirection(-forward, actorSpeed);
         }
 
         if (g_theInput->IsKeyDown('A'))
         {
-            possessActor->MoveInDirection(left, possessActor->m_definition->m_walkSpeed);
+            possessActor->MoveInDirection(left, actorSpeed);
         }
 
         if (g_theInput->IsKeyDown('D'))
         {
-            possessActor->MoveInDirection(-left, possessActor->m_definition->m_walkSpeed);
+            possessActor->MoveInDirection(-left, actorSpeed);
+        }
+
+        if (g_theInput->WasKeyJustPressed('1'))
+        {
+            possessActor->SwitchInventory(0);
+        }
+        if (g_theInput->WasKeyJustPressed('2'))
+        {
+            possessActor->SwitchInventory(1);
         }
     }
     else
@@ -190,6 +208,8 @@ void PlayerController::UpdateInput(float deltaSeconds)
 void PlayerController::UpdateCamera(float deltaSeconds)
 {
     UNUSED(deltaSeconds)
+    if (g_theGame->m_currentState != GameState::PLAYING)
+        return;
     if (!m_bCameraMode)
     {
         Actor* possessActor = GetActor();
@@ -226,7 +246,14 @@ Mat44 PlayerController::GetModelToWorldTransform() const
 
 void PlayerController::HandleRayCast()
 {
-    if (g_theInput->WasMouseButtonJustPressed(KEYCODE_LEFT_MOUSE))
+    if (g_theGame->m_currentState == GameState::PLAYING && !m_bCameraMode)
+    {
+        if (g_theInput->WasMouseButtonJustPressed(KEYCODE_LEFT_MOUSE))
+            GetActor()->m_currentWeapon->Fire();
+    }
+    if (g_theGame->m_currentState != GameState::PLAYING)
+        return;
+    /*if (g_theInput->WasMouseButtonJustPressed(KEYCODE_LEFT_MOUSE))
     {
         Vec3 forward, left, up;
         m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
@@ -257,5 +284,5 @@ void PlayerController::HandleRayCast()
         {
             DebugAddWorldCylinder(m_position, m_position + forward * 0.5f, 0.01f, 10.f, Rgba8::WHITE, Rgba8::WHITE, DebugRenderMode::X_RAY);
         }
-    }
+    }*/
 }
