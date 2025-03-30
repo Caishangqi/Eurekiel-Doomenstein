@@ -18,3 +18,8 @@ Actor* AIController::GetActor()
 {
     return Controller::GetActor();
 }
+
+void AIController::DamagedBy(ActorHandle& attacker)
+{
+    m_targetActorHandle = attacker;
+}
