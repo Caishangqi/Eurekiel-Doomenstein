@@ -61,9 +61,11 @@ public:
 
     /// Raycast
     RaycastResult3D RaycastAll(const Vec3& start, const Vec3& direction, float distance);
+    RaycastResult3D RaycastAll(Actor* actor, ActorHandle& resultActorHit,const Vec3& start, const Vec3& direction, float distance);
     RaycastResult3D RaycastWorldXY(const Vec3& start, const Vec3& direction, float distance);
     RaycastResult3D RaycastWorldZ(const Vec3& start, const Vec3& direction, float distance);
     RaycastResult3D RaycastWorldActors(const Vec3& start, const Vec3& direction, float distance);
+    RaycastResult3D RaycastWorldActors(Actor* actor, ActorHandle& resultActorHit, const Vec3& start, const Vec3& direction, float distance);
 
     ///
     /// Lighting
@@ -99,7 +101,7 @@ protected:
     /// Actors
     std::vector<Actor*>       m_actors;
     static const unsigned int MAX_ACTOR_UID  = 0x0000fffeu;
-    unsigned int              m_nextActorUID = 0;
+    unsigned int              m_nextActorUID = 3568;
     /// 
 
     /// Lighting

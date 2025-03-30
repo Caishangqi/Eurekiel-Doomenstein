@@ -303,7 +303,6 @@ void Map::ColliedActors(Actor* actorA, Actor* actorB)
 {
     if (DoZCylinder3DOverlap(actorA->GetColliderZCylinder(), actorB->GetColliderZCylinder()))
     {
-        actorA->OnColliedEnter(actorB);
         actorB->OnColliedEnter(actorA);
     }
 }
@@ -359,7 +358,7 @@ void Map::Render()
     g_theRenderer->BindShader(nullptr);
     for (Actor* actor : m_actors)
     {
-        if (actor->m_handle.IsValid() && actor->m_definition->m_visible)
+        if (actor && actor->m_handle.IsValid() && actor->m_definition->m_visible)
         {
             actor->Render();
         }
@@ -374,6 +373,37 @@ RaycastResult3D Map::RaycastAll(const Vec3& start, const Vec3& direction, float 
     results.reserve(4);
     RaycastResult3D result;
     results.push_back(RaycastWorldActors(start, direction, distance));
+    results.push_back(RaycastWorldZ(start, direction, distance));
+    results.push_back(RaycastWorldXY(start, direction, distance));
+    for (RaycastResult3D result_3d : results)
+    {
+        if (result_3d.m_didImpact)
+        {
+            resultImpact.push_back(result_3d);
+        }
+    }
+
+    float tempDist = FLT_MAX;
+    for (RaycastResult3D result_Dist : resultImpact)
+    {
+        if (result_Dist.m_impactDist < tempDist)
+        {
+            tempDist = result_Dist.m_impactDist;
+            result   = result_Dist;
+        }
+    }
+
+    return result;
+}
+
+RaycastResult3D Map::RaycastAll(Actor* actor, ActorHandle& resultActorHit, const Vec3& start, const Vec3& direction, float distance)
+{
+    std::vector<RaycastResult3D> results;
+    std::vector<RaycastResult3D> resultImpact;
+    resultImpact.reserve(4);
+    results.reserve(4);
+    RaycastResult3D result;
+    results.push_back(RaycastWorldActors(actor, resultActorHit, start, direction, distance));
     results.push_back(RaycastWorldZ(start, direction, distance));
     results.push_back(RaycastWorldXY(start, direction, distance));
     for (RaycastResult3D result_3d : results)
@@ -547,6 +577,55 @@ RaycastResult3D Map::RaycastWorldActors(const Vec3& start, const Vec3& direction
     }
     return result;
 }
+
+RaycastResult3D Map::RaycastWorldActors(Actor* actor, ActorHandle& resultActorHit, const Vec3& start, const Vec3& direction, float distance)
+{
+    struct ResultPair
+    {
+        RaycastResult3D raycastResult;
+        ActorHandle     hitActor;
+
+        ResultPair() = default;
+
+        ResultPair(const RaycastResult3D& result, const ActorHandle& actor)
+            : raycastResult(result), hitActor(actor)
+        {
+        }
+    };
+
+    ResultPair closestHit;
+    float      closestDistance = FLT_MAX;
+    bool       hasHit          = false;
+
+    for (Actor* testActor : m_actors)
+    {
+        if (testActor == actor || !testActor)
+            continue;
+        if (testActor->m_definition->m_visible == false)
+            continue;
+        RaycastResult3D result = RaycastVsZCylinder3D(start, direction, distance, testActor->GetColliderZCylinder());
+        if (result.m_didImpact && result.m_impactDist < closestDistance)
+        {
+            closestDistance = result.m_impactDist;
+            closestHit      = ResultPair(result, testActor->m_handle);
+            hasHit          = true;
+        }
+    }
+
+    if (!hasHit)
+    {
+        RaycastResult3D missResult;
+        missResult.m_rayStartPos  = start;
+        missResult.m_rayFwdNormal = direction;
+        missResult.m_rayMaxLength = distance;
+        resultActorHit            = ActorHandle::INVALID;
+        return missResult;
+    }
+
+    resultActorHit = closestHit.hitActor;
+    return closestHit.raycastResult;
+}
+
 
 void Map::HandleDecreaseSunDirectionX()
 {
