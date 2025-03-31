@@ -2,6 +2,7 @@
 
 #include "Engine/Math/MathUtils.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
+#include "Game/Definition/WeaponDefinition.hpp"
 #include "Game/Gameplay/Map.hpp"
 #include "Game/Gameplay/Weapon.hpp"
 
@@ -51,13 +52,17 @@ void AIController::Update(float deltaTime)
         controlledActor->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
         controlledActor->MoveInDirection(forward, moveSpeed);
     }
-    else
+    /// Hanlde melee weapon based on melee weapon range
+    if (controlledActor->m_currentWeapon && controlledActor->m_currentWeapon->m_definition->m_meleeCount > 0)
     {
-        /// TODO: Consider find the ai current equipped weapon, if finded determine whether is melee weapon
-        /// and using melee weapon range to determined whether or not fire the weapon
+        if (distanceToTarget < controlledActor->m_currentWeapon->m_definition->m_meleeRange + targetActor->m_physicalRadius)
+            controlledActor->m_currentWeapon->Fire();
+    }
+    /*else
+    {
         controlledActor->m_currentWeapon->Fire();
         // controlledActor->MoveInDirection(dirToTarget, moveSpeed * 0.2f);
-    }
+    }*/
 }
 
 void AIController::Possess(ActorHandle& actorHandle)
