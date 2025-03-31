@@ -145,10 +145,7 @@ void Actor::MoveInDirection(Vec3 direction, float speed)
 
 void Actor::TurnInDirection(Vec3 direction)
 {
-    if (m_controller && dynamic_cast<PlayerController*>(m_controller))
-    {
-        m_orientation = EulerAngles(direction);
-    }
+    m_orientation = EulerAngles(direction);
 }
 
 ZCylinder& Actor::GetColliderZCylinder()
