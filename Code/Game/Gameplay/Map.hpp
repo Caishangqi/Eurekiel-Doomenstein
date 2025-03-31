@@ -26,6 +26,7 @@ struct Vertex_PCU;
 class Map
 {
     friend class PlayerController;
+    friend class Weapon;
 
 public:
     Map(Game* game, const MapDefinition* definition);
@@ -61,7 +62,7 @@ public:
 
     /// Raycast
     RaycastResult3D RaycastAll(const Vec3& start, const Vec3& direction, float distance);
-    RaycastResult3D RaycastAll(Actor* actor, ActorHandle& resultActorHit,const Vec3& start, const Vec3& direction, float distance);
+    RaycastResult3D RaycastAll(Actor* actor, ActorHandle& resultActorHit, const Vec3& start, const Vec3& direction, float distance);
     RaycastResult3D RaycastWorldXY(const Vec3& start, const Vec3& direction, float distance);
     RaycastResult3D RaycastWorldZ(const Vec3& start, const Vec3& direction, float distance);
     RaycastResult3D RaycastWorldActors(const Vec3& start, const Vec3& direction, float distance);
@@ -84,7 +85,7 @@ public:
     Actor* SpawnPlayer(PlayerController* playerController); // Spawn a marine actor at a random spawn point and possess it with the player.
     Actor* GetActorByHandle(const ActorHandle handle) const;
     Actor* GetActorByName(const std::string& name) const;
-    Actor* GetClosestVisibleEnemy(Actor * instigator); //Search the actor list to find actors meeting the provided criteria.
+    Actor* GetClosestVisibleEnemy(Actor* instigator); //Search the actor list to find actors meeting the provided criteria.
     void   GetActorsByName(std::vector<Actor*>& inActors, const std::string& name) const;
     Actor* DebugPossessNext(); // Have the player controller possess the next actor in the list that can be possessed
     void   DeleteDestroyedActors(); // Delete any actors marked as destroyed.
