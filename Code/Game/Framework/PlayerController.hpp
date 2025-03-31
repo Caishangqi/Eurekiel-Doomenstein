@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Controller.hpp"
 #include "../Entity.hpp"
+#include "Engine/Core/EngineCommon.hpp"
 
 class Actor;
 class Camera;
@@ -20,6 +21,7 @@ h.	The player controller should not be able to move, aim, or fire while the acto
 class PlayerController : public Controller
 {
 public:
+    
     PlayerController(Map* map);
     PlayerController(Map* map, Vec3 position, EulerAngles orientation = EulerAngles());
     ~PlayerController() override;
@@ -31,6 +33,8 @@ public:
     void UpdateCamera(float deltaSeconds); // Update our camera settings, taking in to account actor eye height and field of vision.
     void Render() const;
 
+    void HandleActorDead(float deltaSeconds);
+    
     Mat44 GetModelToWorldTransform() const;
 
 public:
@@ -43,5 +47,6 @@ private:
     float m_turnRate = 0.075f;
 
     void HandleRayCast();
+    void UpdateDebugMessage();
     /// 
 };

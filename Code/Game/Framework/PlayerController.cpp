@@ -12,6 +12,7 @@
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Gameplay/Weapon.hpp"
 
+
 PlayerController::PlayerController(Map* map): Controller(map)
 {
     m_camera         = new Camera();
@@ -41,16 +42,13 @@ PlayerController::~PlayerController()
 void PlayerController::Possess(ActorHandle& actorHandle)
 {
     Controller::Possess(actorHandle);
-    Actor* possessActor = m_map->GetActorByHandle(actorHandle);
-    // Set the world camera to use the possessed actor's eye height and FOV.
-    m_position    = Vec3(possessActor->m_position.x, possessActor->m_position.y, possessActor->m_definition->m_eyeHeight);
-    m_orientation = possessActor->m_orientation;
 }
 
 void PlayerController::Update(float deltaSeconds)
 {
     Controller::Update(deltaSeconds);
-
+    HandleActorDead(deltaSeconds);
+    UpdateDebugMessage();
     HandleRayCast();
     UpdateInput(deltaSeconds);
     UpdateCamera(deltaSeconds);
@@ -78,15 +76,19 @@ void PlayerController::UpdateInput(float deltaSeconds)
     if (g_theGame->m_currentState != GameState::PLAYING)
         return;
 
+
     if (!m_bCameraMode)
     {
-        Actor*      possessActor            = GetActor();
+        Actor* possessActor = GetActor();
+        if (!possessActor)
+            return;
         EulerAngles possessActorOrientation = possessActor->m_orientation;
         float       actorSpeed              = possessActor->m_definition->m_walkSpeed;
         if (g_theInput->IsKeyDown(KEYCODE_LEFT_SHIFT))
         {
             actorSpeed = possessActor->m_definition->m_runSpeed;
         }
+
         possessActorOrientation.m_yawDegrees += -cursorDelta.x * 0.125f;
         possessActorOrientation.m_pitchDegrees += -cursorDelta.y * 0.125f;
 
@@ -94,6 +96,12 @@ void PlayerController::UpdateInput(float deltaSeconds)
 
         Vec3 forward, left, up;
         possessActor->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
+
+        if (g_theGame->m_currentState == GameState::PLAYING)
+        {
+            if (g_theInput->WasMouseButtonJustPressed(KEYCODE_LEFT_MOUSE) && !possessActor->m_bIsDead)
+                GetActor()->m_currentWeapon->Fire();
+        }
 
         if (g_theInput->IsKeyDown('W'))
         {
@@ -117,15 +125,15 @@ void PlayerController::UpdateInput(float deltaSeconds)
 
         if (g_theInput->WasKeyJustPressed('1'))
         {
-            possessActor->SwitchInventory(0);
+            possessActor->EquipWeapon(0);
         }
         if (g_theInput->WasKeyJustPressed('2'))
         {
-            possessActor->SwitchInventory(1);
+            possessActor->EquipWeapon(1);
         }
         if (g_theInput->WasKeyJustPressed('3'))
         {
-            possessActor->SwitchInventory(2);
+            possessActor->EquipWeapon(2);
         }
     }
     else
@@ -217,9 +225,10 @@ void PlayerController::UpdateCamera(float deltaSeconds)
     if (!m_bCameraMode)
     {
         Actor* possessActor = GetActor();
-        if (possessActor)
+        if (possessActor && !possessActor->m_bIsDead)
         {
             m_camera->SetPerspectiveView(2.0f, GetActor()->m_definition->m_cameraFOV, 0.1f, 100.f);
+            // Set the world camera to use the possessed actor's eye height and FOV.
             m_position    = Vec3(possessActor->m_position.x, possessActor->m_position.y, possessActor->m_definition->m_eyeHeight);
             m_orientation = possessActor->m_orientation;
         }
@@ -241,6 +250,26 @@ void PlayerController::Render() const
     g_theRenderer->EndCamera(*m_camera);
 }
 
+void PlayerController::HandleActorDead(float deltaSeconds)
+{
+    UNUSED(deltaSeconds)
+    if (g_theGame->m_currentState != GameState::PLAYING)
+        return;
+    if (m_actorHandle.IsValid())
+    {
+        Actor* possessActor = m_map->GetActorByHandle(m_actorHandle);
+        if (possessActor && possessActor->m_bIsDead && possessActor->m_definition->m_name == "Marine")
+        {
+            Vec3  startPos      = possessActor->m_position + Vec3(0, 0, possessActor->m_definition->m_eyeHeight);
+            Vec3  endPos        = possessActor->m_position;
+            float deathFraction = possessActor->m_dead / possessActor->m_definition->m_corpseLifetime;
+            float interpolate   = Interpolate(startPos.z, endPos.z, deathFraction);
+            m_position          = Vec3(possessActor->m_position.x, possessActor->m_position.y, interpolate);
+            //m_orientation       = possessActor->m_orientation;
+        }
+    }
+}
+
 Mat44 PlayerController::GetModelToWorldTransform() const
 {
     Mat44 matTranslation = Mat44::MakeTranslation3D(m_position);
@@ -250,43 +279,18 @@ Mat44 PlayerController::GetModelToWorldTransform() const
 
 void PlayerController::HandleRayCast()
 {
-    if (g_theGame->m_currentState == GameState::PLAYING && !m_bCameraMode)
+}
+
+void PlayerController::UpdateDebugMessage()
+{
+    if (g_theGame->m_currentState == GameState::PLAYING)
     {
-        if (g_theInput->WasMouseButtonJustPressed(KEYCODE_LEFT_MOUSE))
-            GetActor()->m_currentWeapon->Fire();
+        AABB2 size    = g_theGame->m_screenSpace;
+        size.m_maxs.y = size.m_mins.y + 60;
+        size.m_maxs.x /= 2;
+        size.m_maxs.x += 200;
+        Actor* possessActor = GetActor();
+        if (possessActor)
+            DebugAddScreenText(Stringf("Possessor Health: %.1f", possessActor->m_health), size, 18.f, 0);
     }
-    if (g_theGame->m_currentState != GameState::PLAYING)
-        return;
-    /*if (g_theInput->WasMouseButtonJustPressed(KEYCODE_LEFT_MOUSE))
-    {
-        Vec3 forward, left, up;
-        m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
-        RaycastResult3D result = m_map->RaycastAll(m_position, forward, 10.f);
-        if (result.m_didImpact)
-        {
-            DebugAddWorldCylinder(result.m_rayStartPos, result.m_rayStartPos + result.m_rayFwdNormal * 10, 0.01f, 10.f, Rgba8::WHITE, Rgba8::WHITE, DebugRenderMode::X_RAY);
-            DebugAddWorldSphere(result.m_impactPos, 0.06f, 10.f, Rgba8::WHITE, Rgba8::WHITE, DebugRenderMode::USE_DEPTH);
-            DebugAddWorldArrow(result.m_impactPos + result.m_impactNormal * 0.3f, result.m_impactPos, 0.03f, 10.f, Rgba8(0, 6, 177), Rgba8(0, 6, 177));
-        }
-        else
-        {
-            DebugAddWorldCylinder(m_position, m_position + forward * 10, 0.01f, 10.f, Rgba8::WHITE, Rgba8::WHITE, DebugRenderMode::X_RAY);
-        }
-    }
-    if (g_theInput->WasMouseButtonJustPressed(KEYCODE_RIGHT_MOUSE))
-    {
-        Vec3 forward, left, up;
-        m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
-        RaycastResult3D result = m_map->RaycastAll(m_position, forward, 0.5f);
-        if (result.m_didImpact)
-        {
-            DebugAddWorldCylinder(result.m_rayStartPos, result.m_rayStartPos + result.m_rayFwdNormal * 0.5f, 0.01f, 10.f, Rgba8::WHITE, Rgba8::WHITE, DebugRenderMode::X_RAY);
-            DebugAddWorldSphere(result.m_impactPos, 0.06f, 10.f, Rgba8::WHITE, Rgba8::WHITE, DebugRenderMode::USE_DEPTH);
-            DebugAddWorldArrow(result.m_impactPos + result.m_impactNormal * 0.3f, result.m_impactPos, 0.03f, 10.f, Rgba8(0, 6, 177), Rgba8(0, 6, 177));
-        }
-        else
-        {
-            DebugAddWorldCylinder(m_position, m_position + forward * 0.5f, 0.01f, 10.f, Rgba8::WHITE, Rgba8::WHITE, DebugRenderMode::X_RAY);
-        }
-    }*/
 }
