@@ -94,9 +94,9 @@ ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
     if (aiElement)
     {
         printf("                                    ‖ Loading AI Information\n");
-        ParseXmlAttribute(*aiElement, "aiEnabled", m_aiEnabled);
-        ParseXmlAttribute(*aiElement, "sightRadius", m_sightRadius);
-        ParseXmlAttribute(*aiElement, "sightAngle", m_sightAngle);
+        m_aiEnabled   = ParseXmlAttribute(*aiElement, "aiEnabled", m_aiEnabled);
+        m_sightRadius = ParseXmlAttribute(*aiElement, "sightRadius", m_sightRadius);
+        m_sightAngle  = ParseXmlAttribute(*aiElement, "sightAngle", m_sightAngle);
     }
     const XmlElement* visualsElement = FindChildElementByName(actorDefElement, "Visuals");
     if (visualsElement)
