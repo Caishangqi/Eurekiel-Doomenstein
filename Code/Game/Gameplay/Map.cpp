@@ -724,6 +724,7 @@ Actor* Map::SpawnActor(const SpawnInfo& spawnInfo)
     actor->m_handle    = handle;
     actor->m_map       = this;
     m_actors[newIndex] = actor;
+    actor->PostInitialize();
     return actor;
 }
 
@@ -781,10 +782,70 @@ Actor* Map::GetActorByName(const std::string& name) const
     return nullptr;
 }
 
-Actor* Map::GetClosestVisibleEnemy()
+Actor* Map::GetClosestVisibleEnemy(Actor* instigator)
 {
-    return nullptr;
+    float  closestDistSq = FLT_MAX;
+    Actor* closestEnemy  = nullptr;
+
+    for (Actor* actor : m_actors)
+    {
+        if (actor == nullptr || actor == instigator)
+            continue;
+        // Skip same faction or neutral
+        if (actor->m_definition->m_faction == instigator->m_definition->m_faction)
+        {
+            continue;
+        }
+        if (actor->m_definition->m_faction == "NEUTRAL"
+            || instigator->m_definition->m_faction == "NEUTRAL")
+        {
+            continue;
+        }
+
+        // Check distance
+        Vec2 actorPos2D      = Vec2(actor->m_position.x, actor->m_position.y);
+        Vec2 instigatorPos2D = Vec2(instigator->m_position.x, instigator->m_position.y);
+
+        float distanceSq = GetDistanceSquared2D(actorPos2D, instigatorPos2D);
+        float radiusSq   = instigator->m_definition->m_sightRadius * instigator->m_definition->m_sightRadius;
+        if (distanceSq > radiusSq)
+        {
+            continue; // too far
+        }
+
+        // Check angle
+        Vec3 fwd3, left3, up3;
+        instigator->m_orientation.GetAsVectors_IFwd_JLeft_KUp(fwd3, left3, up3);
+
+        Vec2 fwd2D(fwd3.x, fwd3.y);
+        Vec2 dirToActor = (actorPos2D - instigatorPos2D).GetNormalized();
+
+        // The angle between forward vector and direction to the actor
+        float angleBetween = GetAngleDegreesBetweenVectors2D(fwd2D, dirToActor);
+        if (angleBetween > instigator->m_definition->m_sightAngle * 0.5f)
+        {
+            continue; // out of FOV cone
+        }
+
+        // (4) Line of Sight check: make sure no walls blocking
+        // RaycastResult3D rayResult = RaycastAll(instigator->m_position, fwd3, ...);
+        // if ( rayResult.m_didImpact && ... ) { continue; }
+        if (distanceSq < closestDistSq)
+        {
+            closestDistSq = distanceSq;
+            closestEnemy  = actor;
+        }
+    }
+
+    if (closestEnemy)
+    {
+        /*printf("Find Enemy: %s, Dist=%.2f\n",
+               closestEnemy->m_definition->m_name.c_str(),
+               sqrtf(closestDistSq));*/
+    }
+    return closestEnemy;
 }
+
 
 void Map::GetActorsByName(std::vector<Actor*>& inActors, const std::string& name) const
 {

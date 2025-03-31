@@ -84,7 +84,7 @@ public:
     Actor* SpawnPlayer(PlayerController* playerController); // Spawn a marine actor at a random spawn point and possess it with the player.
     Actor* GetActorByHandle(const ActorHandle handle) const;
     Actor* GetActorByName(const std::string& name) const;
-    Actor* GetClosestVisibleEnemy(); //Search the actor list to find actors meeting the provided criteria.
+    Actor* GetClosestVisibleEnemy(Actor * instigator); //Search the actor list to find actors meeting the provided criteria.
     void   GetActorsByName(std::vector<Actor*>& inActors, const std::string& name) const;
     Actor* DebugPossessNext(); // Have the player controller possess the next actor in the list that can be possessed
     void   DeleteDestroyedActors(); // Delete any actors marked as destroyed.
