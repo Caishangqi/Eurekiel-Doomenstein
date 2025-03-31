@@ -78,5 +78,5 @@ Actor* AIController::GetActor()
 void AIController::DamagedBy(ActorHandle& attacker)
 {
     m_targetActorHandle = attacker;
-    printf("AIController::Update    > Target actor changed to %s\n", m_map->GetActorByHandle(attacker)->m_definition->m_name.c_str());
+    printf("AIController::DamagedBy    > Target actor changed to %s\n", m_map->GetActorByHandle(attacker)->m_definition->m_name.c_str());
 }
