@@ -3,6 +3,7 @@
 #include "Engine/Math/MathUtils.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Gameplay/Map.hpp"
+#include "Game/Gameplay/Weapon.hpp"
 
 AIController::AIController(Map* map): Controller(map)
 {
@@ -52,6 +53,9 @@ void AIController::Update(float deltaTime)
     }
     else
     {
+        /// TODO: Consider find the ai current equipped weapon, if finded determine whether is melee weapon
+        /// and using melee weapon range to determined whether or not fire the weapon
+        controlledActor->m_currentWeapon->Fire();
         // controlledActor->MoveInDirection(dirToTarget, moveSpeed * 0.2f);
     }
 }
