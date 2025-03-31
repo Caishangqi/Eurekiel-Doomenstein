@@ -424,69 +424,6 @@ void Game::HandleKeyBoardEvent(float deltaTime)
             g_theEventSystem->FireEvent("WindowCloseEvent");
         }
     }
-
-    if (g_theInput->WasKeyJustPressed('H') || controller.WasButtonJustPressed(XBOX_BUTTON_START))
-    {
-        if (m_currentState == GameState::PLAYING)
-        {
-            m_player->m_position    = Vec3(-2, 0, 1);
-            m_player->m_orientation = EulerAngles();
-        }
-    }
-
-    if (m_currentState == GameState::PLAYING)
-    {
-        // 1
-        if (g_theInput->WasKeyJustPressed(0x31))
-        {
-            Vec3 forward, left, up;
-            m_player->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
-            DebugAddWorldCylinder(m_player->m_position, m_player->m_position + forward * 20, 0.0625f, 10.f, Rgba8::YELLOW, Rgba8::YELLOW, DebugRenderMode::X_RAY);
-        }
-        if (g_theInput->IsKeyDown(0x32))
-        {
-            DebugAddWorldSphere(Vec3(m_player->m_position.x, m_player->m_position.y, 0.f), 0.25f, 10.f, Rgba8(150, 75, 0), Rgba8(150, 75, 0));
-        }
-        // 3
-        if (g_theInput->WasKeyJustPressed(0x33))
-        {
-            Vec3 forward, left, up;
-            m_player->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
-            // Push the wire ball 2 unit forward away
-            DebugAddWorldWireSphere(m_player->m_position + forward * 2, 1, 5.f, Rgba8::GREEN, Rgba8::RED);
-        }
-        // 4
-        if (g_theInput->WasKeyJustPressed(0x34))
-        {
-            Mat44 transform = Mat44::MakeTranslation3D(m_player->m_position);
-            transform.Append(m_player->m_orientation.GetAsMatrix_IFwd_JLeft_KUp());
-            DebugAddWorldBasis(transform, 20.f);
-        }
-
-        // 5
-        if (g_theInput->WasKeyJustPressed(0x35))
-        {
-            Vec3 forward, left, up;
-            m_player->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
-            DebugAddWorldBillboardText(
-                Stringf("Position: %.2f, %.2f, %.2f Orientation: %.2f, %.2f, %.2f", m_player->m_position.x, m_player->m_position.y, m_player->m_position.z, m_player->m_orientation.m_yawDegrees,
-                        m_player->m_orientation.m_pitchDegrees, m_player->m_orientation.m_rollDegrees), m_player->m_position + forward * 2, 0.125f, Rgba8::WHITE, Rgba8::RED,
-                DebugRenderMode::USE_DEPTH,
-                Vec2(0.5, 0.5), 10.f);
-        }
-
-        // 6
-        if (g_theInput->WasKeyJustPressed(0x36))
-        {
-            DebugAddWorldCylinder(m_player->m_position + Vec3(0, 0, 1), m_player->m_position, 0.5f, 10, Rgba8::WHITE, Rgba8::RED);
-        }
-
-        // 7
-        if (g_theInput->WasKeyJustPressed(0x37))
-        {
-            DebugAddMessage(Stringf("Camera orientation: %.2f, %.2f, %.2f", m_player->m_orientation.m_yawDegrees, m_player->m_orientation.m_pitchDegrees, m_player->m_orientation.m_rollDegrees), 5);
-        }
-    }
 }
 
 void Game::HandleMouseEvent(float deltaTime)
