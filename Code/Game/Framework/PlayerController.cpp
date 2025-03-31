@@ -123,6 +123,10 @@ void PlayerController::UpdateInput(float deltaSeconds)
         {
             possessActor->SwitchInventory(1);
         }
+        if (g_theInput->WasKeyJustPressed('3'))
+        {
+            possessActor->SwitchInventory(2);
+        }
     }
     else
     {
