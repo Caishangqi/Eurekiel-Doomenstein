@@ -46,7 +46,8 @@ Map::Map(Game* game, const MapDefinition* definition): m_game(game), m_definitio
     {
         SpawnActor(spawnInfo);
     }
-    SpawnPlayer(m_game->m_player);
+    Actor* playerActor = SpawnPlayer(m_game->m_player);
+    m_game->m_player->Possess(playerActor->m_handle);
     /// 
 }
 
@@ -275,6 +276,7 @@ void Map::Update()
     /// 
     ColliedWithActors();
     ColliedActorsWithMap();
+    CheckAndRespawnPlayer();
 }
 
 void Map::EndFrame()
@@ -740,8 +742,17 @@ Actor* Map::SpawnPlayer(PlayerController* playerController)
     spawnInfo.m_velocity    = spawnPoint->m_velocity;
     Actor* playerActor      = SpawnActor(spawnInfo);
     playerController->m_map = this;
-    playerController->Possess(playerActor->m_handle);
     return playerActor;
+}
+
+void Map::CheckAndRespawnPlayer()
+{
+    if (!m_game->m_player->GetActor())
+    {
+        Actor* playerActor = SpawnPlayer(m_game->m_player);
+        printf("Map::CheckAndRespawnPlayer      Player spawned at: (%f, %f, %f)\n", playerActor->m_position.x, playerActor->m_position.y, playerActor->m_position.z);
+        m_game->m_player->Possess(playerActor->m_handle);
+    }
 }
 
 Actor* Map::GetActorByHandle(const ActorHandle handle) const
@@ -825,6 +836,12 @@ Actor* Map::GetClosestVisibleEnemy(Actor* instigator)
         if (angleBetween > instigator->m_definition->m_sightAngle * 0.5f)
         {
             continue; // out of FOV cone
+        }
+        ActorHandle     resultHitActor;
+        RaycastResult3D resultHit = RaycastAll(instigator, resultHitActor, instigator->m_position, fwd3, distanceSq);
+        if (GetActorByHandle(resultHitActor) == nullptr)
+        {
+            continue;
         }
 
         // (4) Line of Sight check: make sure no walls blocking
