@@ -2,6 +2,7 @@
 
 #include "Actor.hpp"
 #include "Engine/Core/Clock.hpp"
+#include "Engine/Math/MathUtils.hpp"
 #include "Engine/Math/RandomNumberGenerator.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Game/Game.hpp"
@@ -74,6 +75,47 @@ void Weapon::Fire()
         while (meleeCount > 0)
         {
             meleeCount--;
+            if (!m_owner || !m_owner->m_map) continue;
+
+            // Forward vector from the owner's orientation
+            Vec3 fwd, left, up;
+            m_owner->m_orientation.GetAsVectors_IFwd_JLeft_KUp(fwd, left, up);
+
+            Vec2  ownerPos2D = Vec2(m_owner->m_position.x, m_owner->m_position.y);
+            Vec2  forward2D  = Vec2(fwd.x, fwd.y);
+            float halfArc    = m_definition->m_meleeArc * 0.5f;
+
+            Actor* bestTarget   = nullptr;
+            float  bestDistSq   = FLT_MAX;
+            float  meleeRangeSq = m_definition->m_meleeRange * m_definition->m_meleeRange;
+
+            for (Actor* testActor : m_owner->m_map->m_actors)
+            {
+                if (!testActor || testActor == m_owner) continue;
+                if (testActor->m_bIsDead)continue;
+                if (testActor->m_definition->m_faction == m_owner->m_definition->m_faction)continue;
+                if (testActor->m_definition->m_faction == "NEUTRAL" || m_owner->m_definition->m_faction == "NEUTRAL") continue;
+
+                Vec2  testPos2D = Vec2(testActor->m_position.x, testActor->m_position.y);
+                float distSq    = GetDistanceSquared2D(ownerPos2D, testPos2D);
+                if (distSq > meleeRangeSq) continue;
+                Vec2  toTarget2D = (testPos2D - ownerPos2D).GetNormalized();
+                float angle      = GetAngleDegreesBetweenVectors2D(forward2D, toTarget2D);
+                if (angle > halfArc)continue;
+
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    bestTarget = testActor;
+                }
+            }
+            if (bestTarget)
+            {
+                float damage = g_rng->RollRandomFloatInRange(m_definition->m_meleeDamage.m_min, m_definition->m_meleeDamage.m_max);
+                bestTarget->Damage(damage, m_owner->m_handle);
+                bestTarget->AddImpulse(m_definition->m_meleeImpulse * fwd);
+                printf("Weapon::Fire    Melee: Damaged actor %s\n", bestTarget->m_definition->m_name.c_str());
+            }
         }
     }
 }

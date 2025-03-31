@@ -7,6 +7,9 @@ class WeaponDefinition;
 class Weapon
 {
     friend class Actor;
+    friend class Map;
+    friend class AIController;
+
 public:
     Weapon() = delete;
     Weapon(const WeaponDefinition* definition, Actor* owner);
@@ -21,7 +24,7 @@ public:
     /// @param weaponOrientation 
     /// @param degreeOfVariation 
     /// @return 
-    Vec3        GetRandomDirectionInCone(Vec3 weaponOrientation, float degreeOfVariation);
+    Vec3 GetRandomDirectionInCone(Vec3 weaponOrientation, float degreeOfVariation);
     /// 
     /// @param weaponOrientation 
     /// @param degreeOfVariation 
