@@ -69,6 +69,9 @@ private:
     Texture*                m_texture = nullptr;
 
 public:
+    /// After we inject the map pointer and other handle etc, we perform post initialize
+    void PostInitialize();
+
     void Update(float deltaSeconds);
     /// Perform physics processing if the actor is simulated. Set velocity Z-components to zero for non-flying actors.
     /// Add a drag force equal to our drag times our negative current velocity. Integrate acceleration, velocity,
@@ -106,6 +109,10 @@ public:
     /// @param damage
     /// @param instigator 
     void Damage(float damage, ActorHandle instigator);
+    /// Set Actor state as dead and perform some visual effect
+    /// @param bNewDead the new state of Dead of actor
+    /// @return the current state after set Actor dead
+    bool SetActorDead(bool bNewDead = true);
     void SwitchInventory(unsigned int index);
     void Attack(); // Fire our currently equipped weapon.
 

@@ -52,13 +52,6 @@ Actor::Actor(const SpawnInfo& spawnInfo)
         if (weapon)
             m_weapons.push_back(new Weapon(weapon, this));
     }
-    /// AI Controller
-    if (m_definition->m_aiEnabled)
-    {
-        m_aiController = new AIController(m_map);
-        m_aiController->Possess(m_handle);
-    }
-    m_currentWeapon = m_weapons.empty() ? nullptr : m_weapons[0];
 
     /// Color
     if (m_definition->m_name == "Marine")
@@ -82,6 +75,18 @@ Actor::~Actor()
 }
 
 
+void Actor::PostInitialize()
+{
+    /// AI Controller
+    if (m_definition->m_aiEnabled)
+    {
+        m_aiController = new AIController(m_map);
+        m_controller   = m_aiController;
+        m_controller->Possess(m_handle);
+    }
+    m_currentWeapon = m_weapons.empty() ? nullptr : m_weapons[0];
+}
+
 void Actor::Update(float deltaSeconds)
 {
     UNUSED(deltaSeconds)
@@ -98,6 +103,8 @@ void Actor::Update(float deltaSeconds)
     if (m_definition->m_simulated && m_dead == 0.f)
     {
         UpdatePhysics(deltaSeconds);
+        if (m_aiController)
+            m_aiController->Update(deltaSeconds);
     }
 }
 
@@ -174,7 +181,7 @@ void Actor::OnColliedEnter(Actor* other)
             Vec3 forward, left, right;
             m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
             other->AddImpulse(m_definition->m_impulseOnCollied * forward);
-            m_bIsDead = true;
+            SetActorDead();
         }
         return;
     }
@@ -192,7 +199,7 @@ void Actor::OnColliedEnter(Actor* other)
             Vec3 forward, left, right;
             other->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
             AddImpulse(other->m_definition->m_impulseOnCollied * forward);
-            other->m_bIsDead = true;
+            other->SetActorDead();
         }
         return;
     }
@@ -277,9 +284,33 @@ void Actor::Damage(float damage, ActorHandle instigator)
     m_health -= damage;
     printf("Actor::Damage    Actor %s was Damaged, health now %f\n", m_definition->m_name.c_str(), m_health);
     if (m_health <= 0.f)
-        m_bIsDead = true;
+    {
+        SetActorDead();
+    }
     if (m_aiController)
         m_aiController->DamagedBy(instigator);
+}
+
+bool Actor::SetActorDead(bool bNewDead)
+{
+    m_bIsDead = bNewDead;
+    for (Vertex_PCU& m_vertex : m_vertexes)
+    {
+        m_vertex.m_color = m_vertex.m_color * 0.4f;
+    }
+    for (Vertex_PCU& m_vertexes_wireframe : m_vertexesWireframe)
+    {
+        m_vertexes_wireframe.m_color = m_vertexes_wireframe.m_color * 0.4f;
+    }
+    for (Vertex_PCU& m_vertexes_cone : m_vertexesCone)
+    {
+        m_vertexes_cone.m_color = m_vertexes_cone.m_color * 0.4f;
+    }
+    for (Vertex_PCU& m_vertexes_cone_wireframe : m_vertexesConeWireframe)
+    {
+        m_vertexes_cone_wireframe.m_color = m_vertexes_cone_wireframe.m_color * 0.4f;
+    }
+    return m_bIsDead;
 }
 
 void Actor::SwitchInventory(unsigned int index)
@@ -341,7 +372,7 @@ void Actor::OnUnpossessed()
     m_controller = nullptr;
     if (m_aiController)
     {
-        m_aiController->Possess(m_handle);
+        m_controller = m_aiController;
     }
 }
 
