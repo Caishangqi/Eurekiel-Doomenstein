@@ -1,9 +1,33 @@
 ﻿#include "ActorHandle.hpp"
 
+#include <stdexcept>
+
 const ActorHandle ActorHandle::INVALID = ActorHandle();
 
 ActorHandle::ActorHandle(): m_data(0)
 {
+}
+
+ActorHandle::ActorHandle(unsigned int data)
+{
+    m_data = data;
+}
+
+ActorHandle::ActorHandle(std::string data)
+{
+    try
+    {
+        unsigned long value = std::stoul(data, nullptr, 10);
+        m_data              = static_cast<unsigned int>(value);
+    }
+    catch (const std::invalid_argument& /*e*/)
+    {
+        m_data = 0;
+    }
+    catch (const std::out_of_range& /*e*/)
+    {
+        m_data = 0;
+    }
 }
 
 ActorHandle::ActorHandle(unsigned int uid, unsigned int index)
@@ -27,6 +51,16 @@ unsigned int ActorHandle::GetIndex() const
     *                                       0000 0000 0000 0000 1110 0111 0000 1001
     */
     return m_data & 0xFFFF;
+}
+
+unsigned int ActorHandle::GetData()
+{
+    return m_data;
+}
+
+std::string ActorHandle::ToString() const
+{
+    return std::to_string(m_data);
 }
 
 bool ActorHandle::operator==(const ActorHandle& other) const
