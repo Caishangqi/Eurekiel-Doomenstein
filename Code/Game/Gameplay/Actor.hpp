@@ -7,6 +7,7 @@
 #include "Engine/Math/EulerAngles.hpp"
 #include "Engine/Math/Vec3.hpp"
 #include "../Definition/MapDefinition.hpp"
+#include "Engine/Core/EngineCommon.hpp"
 #include "Engine/Math/ZCylinder.hpp"
 #include "Game/Framework/ActorHandle.hpp"
 
@@ -28,6 +29,7 @@ public:
     Actor(const SpawnInfo& spawnInfo);
     Actor(const Vec3& position, const EulerAngles& orientation, const Rgba8& color, float physicalHeight = 2.0f, float physicalRadius = 1.0f, bool bIsStatic = false);
     virtual ~Actor();
+
 
 public:
     Vec3        m_position; // 3D position, as a Vec3, in world units.
@@ -113,7 +115,7 @@ public:
     /// @param bNewDead the new state of Dead of actor
     /// @return the current state after set Actor dead
     bool SetActorDead(bool bNewDead = true);
-    void SwitchInventory(unsigned int index);
+    void EquipWeapon(unsigned int index);
     void Attack(); // Fire our currently equipped weapon.
 
     void  Render() const;

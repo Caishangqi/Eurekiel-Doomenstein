@@ -92,7 +92,7 @@ void Actor::Update(float deltaSeconds)
     UNUSED(deltaSeconds)
     if (m_bIsDead)
         m_dead += deltaSeconds;
-    if (m_dead >= 2.0f)
+    if (m_dead > m_definition->m_corpseLifetime)
         m_bIsGarbage = true;
 
     /// Shitty code :D
@@ -174,7 +174,7 @@ void Actor::OnColliedEnter(Actor* other)
         else
         {
             float randomDamage = g_rng->RollRandomFloatInRange(m_definition->m_damageOnCollide.m_min, m_definition->m_damageOnCollide.m_max);
-            other->Damage(randomDamage, m_handle);
+            other->Damage(randomDamage, m_owner->m_handle);
             Vec3 forward, left, right;
             m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
             other->AddImpulse(m_definition->m_impulseOnCollied * forward);
@@ -310,7 +310,7 @@ bool Actor::SetActorDead(bool bNewDead)
     return m_bIsDead;
 }
 
-void Actor::SwitchInventory(unsigned int index)
+void Actor::EquipWeapon(unsigned int index)
 {
     if (index < m_weapons.size())
     {
