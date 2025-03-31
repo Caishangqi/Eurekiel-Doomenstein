@@ -24,6 +24,7 @@ void Controller::Possess(ActorHandle& actorHandle)
     if (newPossessActor && newPossessActor->m_handle.IsValid())
         newPossessActor->OnPossessed(this);
     m_actorHandle = actorHandle;
+    printf("Controller::Possess     Possessing Actor at (%f, %f, %f)\n", newPossessActor->m_position.x, newPossessActor->m_position.y, newPossessActor->m_position.z);
 }
 
 Actor* Controller::GetActor()
