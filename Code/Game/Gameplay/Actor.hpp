@@ -30,7 +30,6 @@ public:
     Actor(const Vec3& position, const EulerAngles& orientation, const Rgba8& color, float physicalHeight = 2.0f, float physicalRadius = 1.0f, bool bIsStatic = false);
     virtual ~Actor();
 
-
 public:
     Vec3        m_position; // 3D position, as a Vec3, in world units.
     EulerAngles m_orientation; // 3D orientation, as EulerAngles, in degrees.
@@ -118,6 +117,7 @@ public:
     void EquipWeapon(unsigned int index);
     void Attack(); // Fire our currently equipped weapon.
 
+    Vec3  GetActorEyePosition();
     void  Render() const;
     Mat44 GetModelToWorldTransform() const;
 

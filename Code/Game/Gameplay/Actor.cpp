@@ -328,6 +328,11 @@ void Actor::Attack()
         m_currentWeapon->Fire();
 }
 
+Vec3 Actor::GetActorEyePosition()
+{
+    return m_position + Vec3(0, 0, m_definition->m_eyeHeight);
+}
+
 void Actor::Render() const
 {
     if (m_controller && dynamic_cast<PlayerController*>(m_controller))
