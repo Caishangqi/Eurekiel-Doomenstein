@@ -828,6 +828,8 @@ Actor* Map::GetClosestVisibleEnemy(Actor* instigator)
         Vec3 fwd3, left3, up3;
         instigator->m_orientation.GetAsVectors_IFwd_JLeft_KUp(fwd3, left3, up3);
 
+        Vec3 direction3D = actor->GetActorEyePosition() - instigator->GetActorEyePosition();
+
         Vec2 fwd2D(fwd3.x, fwd3.y);
         Vec2 dirToActor = (actorPos2D - instigatorPos2D).GetNormalized();
 
@@ -837,16 +839,17 @@ Actor* Map::GetClosestVisibleEnemy(Actor* instigator)
         {
             continue; // out of FOV cone
         }
-        ActorHandle     resultHitActor;
-        RaycastResult3D resultHit = RaycastAll(instigator, resultHitActor, instigator->m_position, fwd3, distanceSq);
-        if (GetActorByHandle(resultHitActor) == nullptr)
+        /// Line of Sight check: make sure no walls blocking
+        ActorHandle     resultActor;
+        RaycastResult3D result = RaycastAll(instigator, resultActor, instigator->GetActorEyePosition(), direction3D.GetNormalized(), distanceSq);
+        if (!result.m_didImpact) continue;
+        //DebugAddWorldSphere(result.m_impactPos, 0.1f, 0);
+        if (!IsPointInsideDisc2D(Vec2(result.m_impactPos.x, result.m_impactPos.y), Vec2(actor->m_position.x, actor->m_position.y), actor->m_physicalRadius + 0.1f))
         {
             continue;
         }
+        /// End of Line of Sight check
 
-        // (4) Line of Sight check: make sure no walls blocking
-        // RaycastResult3D rayResult = RaycastAll(instigator->m_position, fwd3, ...);
-        // if ( rayResult.m_didImpact && ... ) { continue; }
         if (distanceSq < closestDistSq)
         {
             closestDistSq = distanceSq;
