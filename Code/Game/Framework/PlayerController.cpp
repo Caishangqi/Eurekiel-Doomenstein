@@ -135,6 +135,22 @@ void PlayerController::UpdateInput(float deltaSeconds)
         {
             possessActor->EquipWeapon(2);
         }
+        if (g_theInput->WasKeyJustPressed(KEYCODE_LEFTARROW))
+        {
+            auto it    = std::find(possessActor->m_weapons.begin(), possessActor->m_weapons.end(), possessActor->m_currentWeapon);
+            int  index = (int)(it - possessActor->m_weapons.begin());
+            index--;
+            int newIndex = (int)((index + possessActor->m_weapons.size()) % possessActor->m_weapons.size());
+            possessActor->EquipWeapon(newIndex);
+        }
+        if (g_theInput->WasKeyJustPressed(KEYCODE_RIGHTARROW))
+        {
+            auto it    = std::find(possessActor->m_weapons.begin(), possessActor->m_weapons.end(), possessActor->m_currentWeapon);
+            int  index = (int)(it - possessActor->m_weapons.begin());
+            index++;
+            int newIndex = (int)index % possessActor->m_weapons.size();
+            possessActor->EquipWeapon(newIndex);
+        }
     }
     else
     {
