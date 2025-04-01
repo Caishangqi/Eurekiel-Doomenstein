@@ -13,6 +13,7 @@ Controller::~Controller()
 
 void Controller::Update(float deltaTime)
 {
+    UNUSED(deltaTime)
 }
 
 void Controller::Possess(ActorHandle& actorHandle)
