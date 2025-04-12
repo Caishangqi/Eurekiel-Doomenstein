@@ -71,6 +71,11 @@ Actor::Actor(const SpawnInfo& spawnInfo)
 
 Actor::~Actor()
 {
+    for (Weapon* weapon : m_weapons)
+    {
+        POINTER_SAFE_DELETE(weapon)
+        POINTER_SAFE_DELETE(m_aiController)
+    }
     printf("Object::Actor    - Destroy Actor and free resources\n");
 }
 
