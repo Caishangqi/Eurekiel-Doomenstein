@@ -7,8 +7,9 @@
 #include "Engine/Core/EngineCommon.hpp"
 
 // Uncomment here if you want my cute console
+#if _DEBUG
 #define CONSOLE_HANDLER HANDLE
-
+#endif
 
 extern App*   g_theApp;
 extern HANDLE g_consoleHandle;
