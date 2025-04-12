@@ -1,5 +1,6 @@
 ﻿#include "ActorDefinition.hpp"
 
+#include "Engine/Core/EngineCommon.hpp"
 #include "Engine/Renderer/Renderer.hpp"
 #include "Engine/Renderer/SpriteSheet.hpp"
 #include "Game/GameCommon.hpp"
@@ -38,6 +39,10 @@ void ActorDefinition::LoadDefinitions(const char* path)
 
 void ActorDefinition::ClearDefinitions()
 {
+    for (ActorDefinition definition : s_definitions)
+    {
+        POINTER_SAFE_DELETE(definition.m_shader)
+    }
 }
 
 ActorDefinition* ActorDefinition::GetByName(const std::string& name)
@@ -113,12 +118,29 @@ ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
         if (visualsElement->ChildElementCount() > 0)
         {
             /// Handle Animation
+            XmlElement const* element = visualsElement->FirstChildElement();
+            while (element != nullptr)
+            {
+                AnimationGroup animation_group = AnimationGroup(*element, *m_spriteSheet);
+                m_animationGroups.push_back(animation_group);
+                printf("                                 — Add AnimationGroup: %s\n", animation_group.m_name.c_str());
+                element = element->NextSiblingElement();
+            }
         }
     }
     /// Handle Sounds Loading
     const XmlElement* soundsElement = FindChildElementByName(actorDefElement, "Sounds");
     if (soundsElement)
     {
+        printf("                                    ‖ Loading Sound Information\n");
+        XmlElement const* element = soundsElement->FirstChildElement();
+        while (element != nullptr)
+        {
+            Sound sound = Sound(*element);
+            m_sounds.push_back(sound);
+            printf("ActorDefinition::ActorDefinition    — Add Sound: %s From: %s\n", sound.m_name.c_str(), sound.m_filePath.c_str());
+            element = element->NextSiblingElement();
+        }
     }
     /// Handle Inventory Loading
     const XmlElement* inventoryElement = FindChildElementByName(actorDefElement, "Inventory");
@@ -134,4 +156,24 @@ ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
         }
     }
     printf("ActorDefinition::ActorDefinition    — Create Definition \"%s\" \n", m_name.c_str());
+}
+
+AnimationGroup* ActorDefinition::GetAnimationGroupByName(std::string& name)
+{
+    for (AnimationGroup& animGroup : m_animationGroups)
+    {
+        if (animGroup.m_name == name)
+            return &animGroup;
+    }
+    return nullptr;
+}
+
+Sound* ActorDefinition::GetSoundByName(std::string& name)
+{
+    for (Sound& sound : m_sounds)
+    {
+        if (sound.m_name == name)
+            return &sound;
+    }
+    return nullptr;
 }

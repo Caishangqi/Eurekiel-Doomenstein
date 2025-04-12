@@ -7,6 +7,8 @@
 #include "Engine/Math/FloatRange.hpp"
 #include "Engine/Math/IntVec2.hpp"
 #include "Engine/Math/Vec2.hpp"
+#include "Game/Framework/AnimationGroup.hpp"
+#include "Game/Framework/Sound.hpp"
 
 class SpriteSheet;
 class Shader;
@@ -21,6 +23,8 @@ public:
 
 public:
     ActorDefinition(XmlElement const& actorDefElement);
+    AnimationGroup* GetAnimationGroupByName(std::string& name);
+    Sound*          GetSoundByName(std::string& name);
 
 public:
     /// Base
@@ -53,15 +57,16 @@ public:
     float m_sightRadius = 0.0f;
     float m_sightAngle  = 0.0f;
     /// Visual
-    Vec2         m_size;
-    Vec2         m_pivot;
-    std::string  m_billboardType = "WorldUpFacing";
-    bool         m_renderLit     = false;
-    bool         m_renderRounded = false;
-    Shader*      m_shader        = nullptr;
-    SpriteSheet* m_spriteSheet   = nullptr;
-    IntVec2      m_cellCount     = IntVec2(8, 9);
-
+    Vec2                        m_size;
+    Vec2                        m_pivot;
+    std::string                 m_billboardType = "WorldUpFacing";
+    bool                        m_renderLit     = false;
+    bool                        m_renderRounded = false;
+    Shader*                     m_shader        = nullptr;
+    SpriteSheet*                m_spriteSheet   = nullptr;
+    IntVec2                     m_cellCount     = IntVec2(8, 9);
+    std::vector<AnimationGroup> m_animationGroups;
+    std::vector<Sound>          m_sounds;
     /// Sounds
 
     /// Inventory
