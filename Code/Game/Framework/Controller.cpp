@@ -9,6 +9,7 @@ Controller::Controller(Map* map): m_map(map)
 
 Controller::~Controller()
 {
+    m_map = nullptr;
 }
 
 void Controller::Update(float deltaTime)
