@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Engine/Core/XmlUtils.hpp"
 #include "Engine/Math/FloatRange.hpp"
+#include "Game/Framework/Hud.hpp"
+#include "Game/Framework/Sound.hpp"
 
 
 class WeaponDefinition
@@ -13,6 +15,7 @@ public:
 
 public:
     WeaponDefinition(XmlElement const& mapDefElement);
+    Sound* GetSoundByName(std::string const& soundName);
 
 public:
     // Definition name of the weapon to add to this actor when it is spawned.
@@ -47,4 +50,8 @@ public:
     FloatRange m_meleeDamage = FloatRange(0.0f, 0.0f);
     // The amount of impulse to impart to any actor hit by a melee attack. Impulse should be in the forward direction of the firing actor.
     float m_meleeImpulse = 0.f;
+    // The Hud of weapon
+    Hud* m_hud = nullptr;
+    // Sound list of weapon
+    std::vector<Sound> m_sounds;
 };
