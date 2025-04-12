@@ -1,0 +1,45 @@
+﻿#include "AnimationGroup.hpp"
+
+
+AnimationGroup::AnimationGroup(XmlElement const& animationGroupElement, const SpriteSheet& spriteSheet): m_spriteSheet(spriteSheet)
+{
+    printf("AnimationGroup::AnimationGroup    %s", "Start Loading AnimationGroup\n");
+    //                                 ‖ 
+    m_name                   = ParseXmlAttribute(animationGroupElement, "name", m_name);
+    m_scaleBySpeed           = ParseXmlAttribute(animationGroupElement, "scaleBySpeed", m_scaleBySpeed);
+    m_secondsPerFrame        = ParseXmlAttribute(animationGroupElement, "secondsPerFrame", m_secondsPerFrame);
+    std::string playbackMode = "Loop";
+    playbackMode             = ParseXmlAttribute(animationGroupElement, "playbackMode", playbackMode);
+    if (playbackMode == "Loop")
+    {
+        m_playbackType = SpriteAnimPlaybackType::LOOP;
+    }
+    if (playbackMode == "Once")
+    {
+        m_playbackType = SpriteAnimPlaybackType::ONCE;
+    }
+    if (playbackMode == "Pingpong")
+    {
+        m_playbackType = SpriteAnimPlaybackType::PING_PONG;
+    }
+    if (animationGroupElement.ChildElementCount() > 0)
+    {
+        XmlElement const* element = animationGroupElement.FirstChildElement();
+        while (element != nullptr)
+        {
+            Vec3                 directionVector  = ParseXmlAttribute(*element, "vector", Vec3::ZERO);
+            XmlElement const*    animationElement = element->FirstChildElement();
+            int                  startFrame       = ParseXmlAttribute(*animationElement, "startFrame", 0);
+            int                  endFrame         = ParseXmlAttribute(*animationElement, "endFrame", 0);
+            SpriteAnimDefinition animation        = SpriteAnimDefinition(spriteSheet, startFrame, endFrame, m_secondsPerFrame, m_playbackType);
+            m_animations.insert(std::make_pair(directionVector, animation));
+            element = element->NextSiblingElement();
+            printf("                                 ‖ Add Direction (%d, %d, %d) to Animation Group\n", (int)directionVector.x, (int)directionVector.y, (int)directionVector.z);
+        }
+    }
+}
+
+SpriteAnimDefinition const& AnimationGroup::GetSpriteAnimation(Vec3 direction)
+{
+    return m_animations.at(direction);
+}
