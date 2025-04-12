@@ -215,6 +215,9 @@ Game::~Game()
     POINTER_SAFE_DELETE(m_worldCamera)
     POINTER_SAFE_DELETE(m_player)
     MapDefinition::ClearDefinitions();
+    ActorDefinition::ClearDefinitions();
+    WeaponDefinition::ClearDefinitions();
+    TileDefinition::ClearDefinitions();
 }
 
 
