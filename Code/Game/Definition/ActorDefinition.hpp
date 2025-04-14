@@ -59,7 +59,7 @@ public:
     /// Visual
     Vec2                        m_size;
     Vec2                        m_pivot;
-    std::string                 m_billboardType = "WorldUpFacing";
+    std::string                 m_billboardType = "None";
     bool                        m_renderLit     = false;
     bool                        m_renderRounded = false;
     Shader*                     m_shader        = nullptr;
