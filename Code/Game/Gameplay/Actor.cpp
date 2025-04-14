@@ -4,12 +4,15 @@
 
 #include "Weapon.hpp"
 #include "Engine/Core/EngineCommon.hpp"
+#include "Engine/Core/Timer.hpp"
 #include "Engine/Core/VertexUtils.hpp"
 #include "Engine/Math/FloatRange.hpp"
 #include "Engine/Math/Mat44.hpp"
 #include "Engine/Math/MathUtils.hpp"
 #include "Engine/Math/RandomNumberGenerator.hpp"
 #include "Engine/Renderer/Renderer.hpp"
+#include "Engine/Renderer/SpriteDefinition.hpp"
+#include "Game/Game.hpp"
 #include "Game/GameCommon.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Definition/WeaponDefinition.hpp"
@@ -89,7 +92,9 @@ void Actor::PostInitialize()
         m_controller   = m_aiController;
         m_controller->Possess(m_handle);
     }
-    m_currentWeapon = m_weapons.empty() ? nullptr : m_weapons[0];
+    m_currentWeapon  = m_weapons.empty() ? nullptr : m_weapons[0];
+    m_animationTimer = new Timer(0, g_theGame->m_clock); // Create timer
+    m_animationTimer->Start();
 }
 
 void Actor::Update(float deltaSeconds)
@@ -340,13 +345,77 @@ Vec3 Actor::GetActorEyePosition()
 
 void Actor::Render() const
 {
-    if (m_controller && dynamic_cast<PlayerController*>(m_controller))
+    if (!m_definition->m_visible) return; // Check if visible. If not, return.
+    if (m_controller && dynamic_cast<PlayerController*>(m_controller)) // Check if we are the rendering player and not in free fly mode. If so, return.
     {
         PlayerController* playerController = dynamic_cast<PlayerController*>(m_controller);
         if (!playerController->m_bCameraMode)
             return;
     }
-    g_theRenderer->SetModelConstants(GetModelToWorldTransform(), m_color);
+    Mat44 localToWorldMat;
+    if (m_definition->m_billboardType == "None")
+        localToWorldMat = GetModelToWorldTransform();
+    else
+    {
+        if (m_definition->m_billboardType == "WorldUpFacing")
+        {
+            Mat44 cameraTransform = Mat44::MakeTranslation3D(g_theGame->m_player->m_position);
+            cameraTransform.Append(g_theGame->m_player->m_orientation.GetAsMatrix_IFwd_JLeft_KUp());
+            localToWorldMat = Mat44::MakeTranslation3D(m_position);
+            localToWorldMat.Append(GetBillboardTransform(BillboardType::WORLD_UP_FACING, cameraTransform, m_position));
+        }
+        else
+        {
+            localToWorldMat = GetModelToWorldTransform();
+        }
+    }
+
+    /// Get facing sprite UVs.
+    Vec3 dirCameraToActor = (m_position - g_theGame->m_player->m_position).GetXY().GetNormalized().GetAsVec3();
+    Vec3 viewingDirection = GetModelToWorldTransform().GetOrthonormalInverse().TransformVectorQuantity3D(dirCameraToActor);
+
+    AnimationGroup* animationGroup = m_currentPlayingAnimationGroup;
+    if (animationGroup == nullptr && (int)m_definition->m_animationGroups.size() > 0) // We use the index 0 animation group
+    {
+        animationGroup = &m_definition->m_animationGroups[0];
+    }
+
+    const SpriteAnimDefinition* anim         = &animationGroup->GetSpriteAnimation(viewingDirection);
+    const SpriteDefinition      spriteAtTime = anim->GetSpriteDefAtTime(m_animationTimer->GetElapsedTime());
+    AABB2                       uvAtTime     = spriteAtTime.GetUVs();
+
+
+    Vec2 spriteOffSet = -m_definition->m_size * m_definition->m_pivot;
+    Vec3 bottomLeft   = Vec3(0, spriteOffSet.x, spriteOffSet.y);
+    Vec3 bottomRight  = bottomLeft + Vec3(0, m_definition->m_size.x, 0);
+    Vec3 topLeft      = bottomLeft + Vec3(0, 0, m_definition->m_size.y);
+    Vec3 topRight     = bottomRight + Vec3(0, 0, m_definition->m_size.y);
+
+    /// Create geometry.
+    bool                       bIsLit = m_definition->m_renderLit;
+    std::vector<Vertex_PCUTBN> vertexesLit;
+    std::vector<Vertex_PCU>    vertexesUnlit;
+    if (bIsLit)
+    {
+        if (m_definition->m_renderRounded)
+        {
+            vertexesLit.reserve(8192);
+            AddVertsForRoundedQuad3D(vertexesLit, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, uvAtTime);
+        }
+        else
+        {
+            vertexesUnlit.reserve(8192);
+            AddVertsForQuad3D(vertexesUnlit, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, uvAtTime);
+        }
+        g_theRenderer->SetModelConstants(localToWorldMat, Rgba8::WHITE);
+        g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
+        g_theRenderer->SetLightConstants(m_map->m_sunDirection, m_map->m_sunIntensity, m_map->m_ambientIntensity);
+        g_theRenderer->BindTexture(&spriteAtTime.GetTexture());
+        g_theRenderer->DrawVertexArray(vertexesLit);
+        return;
+    }
+
+    g_theRenderer->SetModelConstants(localToWorldMat, m_color);
     g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
     g_theRenderer->BindTexture(m_texture);
     g_theRenderer->DrawVertexArray(m_vertexes);
@@ -383,12 +452,31 @@ void Actor::OnUnpossessed()
     }
 }
 
+AnimationGroup* Actor::PlayAnimationByName(std::string& animationName)
+{
+    AnimationGroup* foundedGroup = m_definition->GetAnimationGroupByName(animationName);
+    if (foundedGroup)
+    {
+        if (foundedGroup == m_currentPlayingAnimationGroup)
+        {
+            return foundedGroup;
+        }
+        else
+        {
+            m_currentPlayingAnimationGroup = foundedGroup;
+            return foundedGroup;
+        }
+    }
+    return nullptr;
+}
+
 void Actor::InitLocalVertex()
 {
     if (m_physicalHeight <= 0.001f || m_physicalRadius <= 0.001f)
     {
         return;
     }
+    m_vertexes.reserve(8192);
     // TODO: consider give a better way to handle base center ZCylinder
     ZCylinder localCylinder = m_collisionZCylinder;
     localCylinder.m_center  = Vec3(0, 0, m_physicalHeight / 2.0f);

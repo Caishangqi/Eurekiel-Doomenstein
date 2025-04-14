@@ -12,6 +12,7 @@
 #include "Game/Framework/ActorHandle.hpp"
 
 
+class AnimationGroup;
 class Controller;
 class AIController;
 class Weapon;
@@ -69,6 +70,9 @@ private:
     std::vector<Vertex_PCU> m_vertexesConeWireframe;
     Texture*                m_texture = nullptr;
 
+    AnimationGroup* m_currentPlayingAnimationGroup = nullptr;
+    Timer*          m_animationTimer               = nullptr;
+
 public:
     /// After we inject the map pointer and other handle etc, we perform post initialize
     void PostInitialize();
@@ -124,6 +128,9 @@ public:
     /// AI
     void OnPossessed(Controller* controller); // Callback for actors when possessed by a controller.
     void OnUnpossessed(); // Callback for actors when unpossessed by a controller. 
+
+    /// Animation
+    AnimationGroup* PlayAnimationByName(std::string& animationName);
 
 private:
     void InitLocalVertex();
