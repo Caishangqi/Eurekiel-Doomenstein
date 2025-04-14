@@ -8,6 +8,7 @@
 #include "Engine/Math/RaycastUtils.hpp"
 #include "Game/Definition/MapDefinition.hpp"
 
+
 struct ActorHandle;
 class VertexBuffer;
 class Texture;
@@ -21,12 +22,13 @@ class Actor;
 class AABB2;
 class AABB3;
 struct Vertex_PCU;
-
+struct LightingConstants;
 
 class Map
 {
     friend class PlayerController;
     friend class Weapon;
+    friend class Actor;
 
 public:
     Map(Game* game, const MapDefinition* definition);
@@ -58,8 +60,8 @@ public:
     void ColliedActorWithMap(Actor* actor);
     void PushActorOutOfTile(Actor* actor, const IntVec2& tileCoords);
 
-    void Render();
-
+    void              Render();
+    LightingConstants GetLightConstants();
     /// Raycast
     RaycastResult3D RaycastAll(const Vec3& start, const Vec3& direction, float distance);
     RaycastResult3D RaycastAll(Actor* actor, ActorHandle& resultActorHit, const Vec3& start, const Vec3& direction, float distance);

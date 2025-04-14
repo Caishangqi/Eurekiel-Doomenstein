@@ -14,13 +14,13 @@
 #include "Engine/Math/RaycastUtils.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
-#include "Engine/Renderer/SpriteDefinition.hpp"
 #include "Engine/Renderer/SpriteSheet.hpp"
 #include "Game/Game.hpp"
 #include "Game/GameCommon.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Framework/PlayerController.hpp"
 #include "Game/Definition/TileDefinition.hpp"
+#include "Engine/Renderer/Renderer.cpp"
 #include "Game/Framework/ActorHandle.hpp"
 
 Map::Map(Game* game, const MapDefinition* definition): m_game(game), m_definition(definition)
@@ -365,6 +365,15 @@ void Map::Render()
             actor->Render();
         }
     }
+}
+
+LightingConstants Map::GetLightConstants()
+{
+    LightingConstants constant;
+    constant.AmbientIntensity = m_ambientIntensity;
+    constant.SunDirection     = m_sunDirection;
+    constant.SunIntensity     = m_sunIntensity;
+    return constant;
 }
 
 RaycastResult3D Map::RaycastAll(const Vec3& start, const Vec3& direction, float distance)
