@@ -1,5 +1,7 @@
 ﻿#include "AnimationGroup.hpp"
 
+#include "Engine/Math/MathUtils.hpp"
+
 
 AnimationGroup::AnimationGroup(XmlElement const& animationGroupElement, const SpriteSheet& spriteSheet): m_spriteSheet(spriteSheet)
 {
@@ -31,8 +33,8 @@ AnimationGroup::AnimationGroup(XmlElement const& animationGroupElement, const Sp
             XmlElement const*    animationElement = element->FirstChildElement();
             int                  startFrame       = ParseXmlAttribute(*animationElement, "startFrame", 0);
             int                  endFrame         = ParseXmlAttribute(*animationElement, "endFrame", 0);
-            SpriteAnimDefinition animation        = SpriteAnimDefinition(spriteSheet, startFrame, endFrame, m_secondsPerFrame, m_playbackType);
-            m_animations.insert(std::make_pair(directionVector, animation));
+            SpriteAnimDefinition animation        = SpriteAnimDefinition(spriteSheet, startFrame, endFrame, 1.0f / m_secondsPerFrame, m_playbackType);
+            m_animations.insert(std::make_pair(directionVector.GetNormalized(), animation)); // Be-careful that 
             element = element->NextSiblingElement();
             printf("                                 ‖ Add Direction (%d, %d, %d) to Animation Group\n", (int)directionVector.x, (int)directionVector.y, (int)directionVector.z);
         }
@@ -41,5 +43,16 @@ AnimationGroup::AnimationGroup(XmlElement const& animationGroupElement, const Sp
 
 SpriteAnimDefinition const& AnimationGroup::GetSpriteAnimation(Vec3 direction)
 {
-    return m_animations.at(direction);
+    Vec3  leastOffset     = direction;
+    float directionScalar = -FLT_MAX;
+    for (std::pair<const Vec3, SpriteAnimDefinition>& animation : m_animations)
+    {
+        float scalar = DotProduct3D(direction, animation.first);
+        if (scalar > directionScalar)
+        {
+            directionScalar = scalar;
+            leastOffset     = animation.first;
+        }
+    }
+    return m_animations.at(leastOffset);
 }
