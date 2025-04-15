@@ -3,9 +3,13 @@
 #include "Actor.hpp"
 #include "Engine/Core/Clock.hpp"
 #include "Engine/Core/Timer.hpp"
+#include "Engine/Core/VertexUtils.hpp"
 #include "Engine/Math/MathUtils.hpp"
 #include "Engine/Math/RandomNumberGenerator.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
+#include "Engine/Renderer/Renderer.hpp"
+#include "Engine/Renderer/SpriteDefinition.hpp"
+#include "Engine/Renderer/Texture.hpp"
 #include "Game/Game.hpp"
 #include "Game/GameCommon.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
@@ -14,6 +18,17 @@
 
 Weapon::Weapon(const WeaponDefinition* definition, Actor* owner): m_definition(definition), m_owner(owner)
 {
+    m_animationTimer = new Timer(0, g_theGame->m_clock);
+
+
+    /// Init hud base bound
+    if (m_definition->m_hud != nullptr)
+    {
+        Texture* baseTexture   = m_definition->m_hud->m_baseTexture;
+        IntVec2  baseDimension = baseTexture->GetDimensions();
+        float    multiplier    = g_theGame->m_screenSpace.m_maxs.x / (float)baseDimension.x;
+        m_hudBaseBound         = AABB2(Vec2(0.0f, 0.0f), Vec2(g_theGame->m_screenSpace.m_maxs.x, (float)baseDimension.y * multiplier));
+    }
 }
 
 Weapon::~Weapon()
@@ -33,7 +48,11 @@ void Weapon::Fire()
     {
         printf("Weapon::Fire    Weapon fired by %s\n", m_owner->m_definition->m_name.c_str());
         m_owner->m_controller->m_state = "Attack";
-        m_lastFireTime                 = m_currentFireTime;
+        if (m_definition->m_hud)
+        {
+            PlayAnimationByName("Attack");
+        }
+        m_lastFireTime = m_currentFireTime;
         /// Fire logic here
         while (rayCount > 0)
         {
@@ -201,9 +220,64 @@ Animation* Weapon::PlayAnimationByName(std::string animationName, bool force)
 
 void Weapon::Render() const
 {
+    g_theRenderer->BindShader(m_definition->m_hud->m_shader);
+    g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
+    RenderWeaponBase();
+    RenderWeaponReticle();
+    RenderWeaponAnim();
+}
+
+void Weapon::RenderWeaponBase() const
+{
+    std::vector<Vertex_PCU> vertexes;
+    vertexes.reserve(8192);
+
+    //Vec2 spriteOffSet = -Vec2(m_definition->m_hud->m_spriteSize) * m_definition->m_hud->m_spritePivot;
+    /// Hud Base TODO: Handle multiplayer
+    Texture* baseTexture = m_definition->m_hud->m_baseTexture;
+    AddVertsForAABB2D(vertexes, m_hudBaseBound, Rgba8::WHITE);
+    g_theRenderer->BindTexture(baseTexture);
+    g_theRenderer->DrawVertexArray(vertexes);
+}
+
+void Weapon::RenderWeaponReticle() const
+{
+    std::vector<Vertex_PCU> vertexes;
+    vertexes.reserve(1024);
+    /// Reticle
+
+    Texture* reticleTexture      = m_definition->m_hud->m_reticleTexture;
+    IntVec2  reticleDimension    = reticleTexture->GetDimensions();
+    Vec2     reticleSpriteOffSet = -Vec2(reticleDimension) * m_definition->m_hud->m_spritePivot;
+    AABB2    reticleBound        = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f), (Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f) + Vec2(reticleDimension)));
+    //reticleBound.m_maxs += reticleSpriteOffSet;
+    AddVertsForAABB2D(vertexes, reticleBound, Rgba8::WHITE);
+    g_theRenderer->BindTexture(reticleTexture);
+    g_theRenderer->DrawVertexArray(vertexes);
+}
+
+void Weapon::RenderWeaponAnim() const
+{
+    std::vector<Vertex_PCU> vertexes;
+    vertexes.reserve(1024);
     Animation* animation = m_currentPlayingAnimation;
     if (animation == nullptr && (int)m_definition->m_hud->GetAnimations().size() > 0) // We use the index 0 animation group
     {
         animation = &m_definition->m_hud->GetAnimations()[0];
     }
+    const SpriteAnimDefinition* anim         = animation->GetAnimationDefinition();
+    const SpriteDefinition      spriteAtTime = anim->GetSpriteDefAtTime(m_animationTimer->GetElapsedTime());
+    AABB2                       uvAtTime     = spriteAtTime.GetUVs();
+
+    Vec2 spriteOffSet = -Vec2(m_definition->m_hud->m_spriteSize) * m_definition->m_hud->m_spritePivot;
+
+    IntVec2 boundSize = m_definition->m_hud->m_spriteSize;
+    AABB2   bound     = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f), Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f) + Vec2(boundSize));
+    bound.m_mins += spriteOffSet;
+    bound.m_maxs += spriteOffSet;
+    bound.Translate(Vec2(0, m_hudBaseBound.m_maxs.y)); // Shitty hardcode
+    AddVertsForAABB2D(vertexes, bound, Rgba8::WHITE, uvAtTime.m_mins, uvAtTime.m_maxs);
+    AddVertsForAABB2D(vertexes, uvAtTime, Rgba8::WHITE);
+    g_theRenderer->BindTexture(&spriteAtTime.GetTexture());
+    g_theRenderer->DrawVertexArray(vertexes);
 }

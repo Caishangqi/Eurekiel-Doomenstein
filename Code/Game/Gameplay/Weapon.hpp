@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Engine/Math/AABB2.hpp"
 #include "Engine/Math/Vec3.hpp"
 
 class Timer;
@@ -37,13 +38,18 @@ public:
     void UpdateAnimation(float deltaSeconds);
 
     Animation* PlayAnimationByName(std::string animationName, bool force = false);
-    
+
     void Render() const;
+    void RenderWeaponBase() const;
+    void RenderWeaponReticle() const;
+    void RenderWeaponAnim() const;
 
 protected:
     Actor*                  m_owner        = nullptr;
     const WeaponDefinition* m_definition   = nullptr;
     float                   m_lastFireTime = 0.f;
+
+    AABB2 m_hudBaseBound; // we calculate the bound that Seamlessly connect the weapon texture
 
     Animation* m_currentPlayingAnimation = nullptr;
     Timer*     m_animationTimer          = nullptr;
