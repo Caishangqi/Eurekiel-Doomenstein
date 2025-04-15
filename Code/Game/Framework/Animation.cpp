@@ -14,7 +14,7 @@ Animation::Animation(XmlElement const& animationElement)
     m_startFrame      = ParseXmlAttribute(animationElement, "startFrame", 0);
     m_endFrame        = ParseXmlAttribute(animationElement, "endFrame", 0);
     m_secondsPerFrame = ParseXmlAttribute(animationElement, "secondsPerFrame", m_secondsPerFrame);
-    m_spriteAnim      = new SpriteAnimDefinition(*m_spriteSheet, m_startFrame, m_endFrame, m_secondsPerFrame, m_playbackType);
+    m_spriteAnim      = new SpriteAnimDefinition(*m_spriteSheet, m_startFrame, m_endFrame, 1.0f / m_secondsPerFrame, m_playbackType);
     printf("Animation::Animation    Create Animation: %s \n", m_name.c_str());
 }
 
@@ -26,4 +26,9 @@ Animation::~Animation()
 float Animation::GetAnimationLength()
 {
     return m_spriteAnim->GetDuration();
+}
+
+const SpriteAnimDefinition* Animation::GetAnimationDefinition()
+{
+    return m_spriteAnim;
 }

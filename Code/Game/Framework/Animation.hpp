@@ -14,6 +14,8 @@ public:
     ~Animation();
     float GetAnimationLength();
 
+    const SpriteAnimDefinition* GetAnimationDefinition();
+
 public:
     std::string m_name;
 
