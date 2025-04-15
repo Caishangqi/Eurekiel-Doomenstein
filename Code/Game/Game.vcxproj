@@ -211,6 +211,8 @@
     <ClCompile Include="Framework\PlayerController.cpp">
     </ClCompile>
     <ClCompile Include="Framework\Sound.cpp" />
+    <ClCompile Include="Framework\Widget.cpp" />
+    <ClCompile Include="Framework\WidgetSubsystem.cpp" />
     <ClCompile Include="Gameplay\Actor.cpp" />
     <ClCompile Include="Gameplay\Map.cpp" />
     <ClCompile Include="Gameplay\Tile.cpp" />
@@ -238,6 +240,8 @@
     <ClInclude Include="Framework\Hud.hpp" />
     <ClInclude Include="Framework\PlayerController.hpp" />
     <ClInclude Include="Framework\Sound.hpp" />
+    <ClInclude Include="Framework\Widget.hpp" />
+    <ClInclude Include="Framework\WidgetSubsystem.hpp" />
     <ClInclude Include="Gameplay\Actor.hpp" />
     <ClInclude Include="Game.hpp" />
     <ClInclude Include="GameCommon.hpp" />
