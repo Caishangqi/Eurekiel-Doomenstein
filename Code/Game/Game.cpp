@@ -20,6 +20,7 @@
 #include "Engine/Renderer/Camera.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
+#include "Framework/WidgetSubsystem.hpp"
 #include "Gameplay/Map.hpp"
 
 Game::Game()
@@ -226,6 +227,7 @@ void Game::Render() const
     g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_BACK);
     g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
     g_theRenderer->SetDepthMode(DepthMode::READ_WRITE_LESS_EQUAL);
+    g_theWidgetSubsystem->Render();
     if (m_currentState == GameState::PLAYING)
     {
         g_theRenderer->BeingCamera(*m_player->m_camera);
@@ -340,6 +342,7 @@ void Game::Update()
                                          m_clock->GetFrameRate(),
                                          m_clock->GetTimeScale()
     );
+    g_theWidgetSubsystem->Update();
     DebugAddScreenText(debugGameState, m_screenSpace, 14, 0);
     /// Display Only
 #ifdef COSMIC
