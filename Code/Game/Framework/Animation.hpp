@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Engine/Core/Timer.hpp"
 #include "Engine/Core/XmlUtils.hpp"
 #include "Engine/Math/IntVec2.hpp"
 #include "Engine/Renderer/Shader.hpp"
@@ -11,6 +12,7 @@ class Animation
 public:
     Animation(XmlElement const& animationElement);
     ~Animation();
+    float GetAnimationLength();
 
 public:
     std::string m_name;

@@ -56,3 +56,27 @@ SpriteAnimDefinition const& AnimationGroup::GetSpriteAnimation(Vec3 direction)
     }
     return m_animations.at(leastOffset);
 }
+
+float AnimationGroup::GetAnimationLength()
+{
+    float totalLength = -1;
+    for (std::pair<const Vec3, SpriteAnimDefinition>& animation : m_animations)
+    {
+        totalLength = animation.second.GetDuration();
+        if (totalLength > 0.f)
+            return totalLength;
+    }
+    return -1;
+}
+
+int AnimationGroup::GetAnimationTotalFrame()
+{
+    int totalFrame = -1;
+    for (std::pair<const Vec3, SpriteAnimDefinition>& animation : m_animations)
+    {
+        totalFrame = animation.second.GetTotalFrameInCycle();
+        if (totalFrame > 0)
+            return totalFrame;
+    }
+    return -1;
+}

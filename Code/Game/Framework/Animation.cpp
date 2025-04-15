@@ -22,3 +22,8 @@ Animation::~Animation()
 {
     POINTER_SAFE_DELETE(m_shader)
 }
+
+float Animation::GetAnimationLength()
+{
+    return m_spriteAnim->GetDuration();
+}
