@@ -13,14 +13,16 @@
 #include "Engine/Renderer/Camera.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
+#include "Framework/WidgetSubsystem.hpp"
 
-Window*                g_theWindow   = nullptr;
-Renderer*              g_theRenderer = nullptr;
-App*                   g_theApp      = nullptr;
-RandomNumberGenerator* g_rng         = nullptr;
-InputSystem*           g_theInput    = nullptr;
-AudioSystem*           g_theAudio    = nullptr;
-Game*                  g_theGame     = nullptr;
+Window*                g_theWindow          = nullptr;
+Renderer*              g_theRenderer        = nullptr;
+App*                   g_theApp             = nullptr;
+RandomNumberGenerator* g_rng                = nullptr;
+InputSystem*           g_theInput           = nullptr;
+AudioSystem*           g_theAudio           = nullptr;
+Game*                  g_theGame            = nullptr;
+WidgetSubsystem*       g_theWidgetSubsystem = nullptr;
 
 App::App()
 {
@@ -66,6 +68,8 @@ void App::Startup()
     DebugRenderConfig debugRenderConfig;
     debugRenderConfig.m_renderer = g_theRenderer;
 
+    WidgetSystemConfig widgetSystemConfig;
+    g_theWidgetSubsystem = new WidgetSubsystem(widgetSystemConfig);
 
     DevConsoleConfig consoleConfig;
     consoleConfig.renderer         = g_theRenderer;
@@ -82,6 +86,7 @@ void App::Startup()
     g_theInput->Startup();
     g_theWindow->Startup();
     g_theRenderer->Startup();
+    g_theWidgetSubsystem->Startup();
     DebugRenderSystemStartup(debugRenderConfig);
     g_theAudio->Startup();
 
@@ -103,6 +108,7 @@ void App::Shutdown()
     g_theDevConsole->Shutdown();
     DebugRenderSystemShutdown();
     g_theRenderer->Shutdown();
+    g_theWidgetSubsystem->Shutdown();
     g_theWindow->Shutdown();
     g_theInput->Shutdown();
     g_theEventSystem->Shutdown();
@@ -221,6 +227,7 @@ void App::BeginFrame()
     g_theInput->BeginFrame();
     g_theWindow->BeginFrame();
     g_theRenderer->BeginFrame();
+    g_theWidgetSubsystem->BeginFrame();
     DebugRenderBeginFrame();
     g_theAudio->BeginFrame();
     g_theEventSystem->BeginFrame();
@@ -267,6 +274,7 @@ void App::EndFrame()
 {
     g_theWindow->EndFrame();
     g_theRenderer->EndFrame();
+    g_theWidgetSubsystem->EndFrame();
     DebugRenderEndFrame();
     g_theInput->EndFrame();
     g_theAudio->EndFrame();
