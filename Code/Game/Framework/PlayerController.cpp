@@ -18,6 +18,9 @@ PlayerController::PlayerController(Map* map): Controller(map)
     m_camera         = new Camera();
     m_camera->m_mode = eMode_Perspective;
     m_camera->SetOrthographicView(Vec2(-1, -1), Vec2(1, 1));
+    m_viewCamera         = new Camera();
+    m_viewCamera->m_mode = eMode_Orthographic;
+    m_viewCamera->SetOrthographicView(Vec2::ZERO, g_theGame->m_screenSpace.m_maxs); // TODO: use the normalized viewport
     m_speed    = g_gameConfigBlackboard.GetValue("playerSpeed", m_speed);
     m_turnRate = g_gameConfigBlackboard.GetValue("playerTurnRate", m_turnRate);
     printf("Object::PlayerController    + Creating PlayerController at (%f, %f, %f)\n", m_position.x, m_position.y, m_position.z);
@@ -282,7 +285,7 @@ void PlayerController::UpdateCamera(float deltaSeconds)
 
 void PlayerController::Render() const
 {
-    g_theRenderer->BeingCamera(*m_camera);
+    g_theRenderer->BeingCamera(*m_viewCamera);
     if (g_theGame->m_currentState != GameState::PLAYING)
         return;
     if (!m_actorHandle.IsValid())
@@ -295,7 +298,7 @@ void PlayerController::Render() const
         if (possessActor->m_currentWeapon)
             possessActor->m_currentWeapon->Render();
     }
-    g_theRenderer->EndCamera(*m_camera);
+    g_theRenderer->EndCamera(*m_viewCamera);
 }
 
 void PlayerController::HandleActorDead(float deltaSeconds)

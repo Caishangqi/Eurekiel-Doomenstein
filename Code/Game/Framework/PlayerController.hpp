@@ -38,7 +38,8 @@ public:
     Mat44 GetModelToWorldTransform() const;
 
 public:
-    Camera*     m_camera = nullptr; // Our camera. Used as the world camera when rendering.
+    Camera*     m_camera     = nullptr; // Our camera. Used as the world camera when rendering.
+    Camera*     m_viewCamera = nullptr; // Handle screen message and hud
     Vec3        m_position; // 3D position, separate from our actor so that we have a transform for the free-fly camera, as a Vec3, in world units.
     EulerAngles m_orientation; // 3D orientation, separate from our actor so that we have a transform for the free-fly camera, as EulerAngles, in degrees.
     bool        m_bCameraMode = false; // Toggles whether we are controlling an actor or a free-fly camera currently.
