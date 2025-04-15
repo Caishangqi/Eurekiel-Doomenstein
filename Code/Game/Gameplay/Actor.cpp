@@ -94,12 +94,12 @@ void Actor::PostInitialize()
     }
     m_currentWeapon  = m_weapons.empty() ? nullptr : m_weapons[0];
     m_animationTimer = new Timer(0, g_theGame->m_clock); // Create timer
-    m_animationTimer->Start();
 }
 
 void Actor::Update(float deltaSeconds)
 {
     UNUSED(deltaSeconds)
+    UpdateAnimation(deltaSeconds);
     if (m_bIsDead)
         m_dead += deltaSeconds;
     if (m_dead > m_definition->m_corpseLifetime)
@@ -115,6 +115,18 @@ void Actor::Update(float deltaSeconds)
         UpdatePhysics(deltaSeconds);
         if (m_aiController)
             m_aiController->Update(deltaSeconds);
+    }
+}
+
+void Actor::UpdateAnimation(float deltaSeconds)
+{
+    UNUSED(deltaSeconds)
+    if (!m_currentPlayingAnimationGroup)
+        return;
+    if (m_animationTimer->GetElapsedTime() > m_currentPlayingAnimationGroup->GetAnimationLength())
+    {
+        m_currentPlayingAnimationGroup = nullptr;
+        m_animationTimer->Stop();
     }
 }
 
@@ -408,6 +420,7 @@ void Actor::Render() const
             AddVertsForQuad3D(vertexesUnlit, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, uvAtTime);
         }
         g_theRenderer->SetModelConstants(localToWorldMat, Rgba8::WHITE);
+        g_theRenderer->BindShader(m_definition->m_shader);
         g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
         g_theRenderer->SetLightConstants(m_map->m_sunDirection, m_map->m_sunIntensity, m_map->m_ambientIntensity);
         g_theRenderer->BindTexture(&spriteAtTime.GetTexture());
@@ -452,7 +465,8 @@ void Actor::OnUnpossessed()
     }
 }
 
-AnimationGroup* Actor::PlayAnimationByName(std::string& animationName)
+
+AnimationGroup* Actor::PlayAnimationByName(std::string animationName, bool force)
 {
     AnimationGroup* foundedGroup = m_definition->GetAnimationGroupByName(animationName);
     if (foundedGroup)
@@ -463,8 +477,32 @@ AnimationGroup* Actor::PlayAnimationByName(std::string& animationName)
         }
         else
         {
-            m_currentPlayingAnimationGroup = foundedGroup;
-            return foundedGroup;
+            /// We want to replace to new animation, force update it whether or not it finished
+            if (force)
+            {
+                m_currentPlayingAnimationGroup = foundedGroup;
+                m_animationTimer->Start();
+                return foundedGroup;
+            }
+            else
+            {
+                if (m_currentPlayingAnimationGroup)
+                {
+                    bool isCurrentAnimFinished = m_animationTimer->GetElapsedTime() >= m_currentPlayingAnimationGroup->GetAnimationLength();
+                    if (isCurrentAnimFinished)
+                    {
+                        m_currentPlayingAnimationGroup = foundedGroup;
+                        m_animationTimer->Start();
+                        return foundedGroup;
+                    }
+                }
+                else
+                {
+                    m_currentPlayingAnimationGroup = foundedGroup;
+                    m_animationTimer->Start();
+                    return foundedGroup;
+                }
+            }
         }
     }
     return nullptr;

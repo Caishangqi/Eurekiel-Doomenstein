@@ -78,6 +78,9 @@ public:
     void PostInitialize();
 
     void Update(float deltaSeconds);
+    /// Update Animation, if the animation is finished, we stop the animation timer and set current anim to nullptr.
+    /// @param deltaSeconds 
+    void UpdateAnimation(float deltaSeconds);
     /// Perform physics processing if the actor is simulated. Set velocity Z-components to zero for non-flying actors.
     /// Add a drag force equal to our drag times our negative current velocity. Integrate acceleration, velocity,
     /// and position then clear out acceleration for next frame.
@@ -129,8 +132,15 @@ public:
     void OnPossessed(Controller* controller); // Callback for actors when possessed by a controller.
     void OnUnpossessed(); // Callback for actors when unpossessed by a controller. 
 
+
     /// Animation
-    AnimationGroup* PlayAnimationByName(std::string& animationName);
+
+    /// Play Animation by specific name, it will automatically reset the animation timer if
+    /// successful play
+    /// @param animationName The Name of the animation group
+    /// @param force Whether or not force to play animation that do not wait current animation finished.
+    /// @return the AnimationGroup that played.
+    AnimationGroup* PlayAnimationByName(std::string animationName, bool force = false);
 
 private:
     void InitLocalVertex();
