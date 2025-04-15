@@ -15,6 +15,7 @@ class Renderer;
 class InputSystem;
 class AudioSystem;
 class Game;
+class WidgetSubsystem;
 
 extern RandomNumberGenerator* g_rng;
 extern App*                   g_theApp;
@@ -22,6 +23,7 @@ extern Renderer*              g_theRenderer;
 extern InputSystem*           g_theInput;
 extern AudioSystem*           g_theAudio;
 extern Game*                  g_theGame;
+extern WidgetSubsystem*       g_theWidgetSubsystem;
 
 /// Loaders
 
