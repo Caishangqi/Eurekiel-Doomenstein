@@ -13,6 +13,7 @@ AIController::AIController(Map* map): Controller(map)
 void AIController::Update(float deltaTime)
 {
     Controller::Update(deltaTime);
+    m_state                = "None";
     Actor* controlledActor = m_map->GetActorByHandle(m_actorHandle);
     if (!controlledActor || controlledActor->m_bIsDead)
     {
@@ -42,7 +43,6 @@ void AIController::Update(float deltaTime)
 
     Vec3 newDirectionTurningTo = Vec3(newYaw, controlledActor->m_orientation.m_pitchDegrees, controlledActor->m_orientation.m_rollDegrees);
     controlledActor->TurnInDirection(newDirectionTurningTo);
-
     float distanceToTarget = toTarget3D.GetLength();
     float combinedRadius   = controlledActor->m_physicalRadius + targetActor->m_physicalRadius;
     if (distanceToTarget > combinedRadius + 0.1f)
@@ -51,12 +51,16 @@ void AIController::Update(float deltaTime)
         Vec3  forward, left, up;
         controlledActor->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
         controlledActor->MoveInDirection(forward, moveSpeed);
+        controlledActor->PlayAnimationByName("Walk");
     }
     /// Hanlde melee weapon based on melee weapon range
     if (controlledActor->m_currentWeapon && controlledActor->m_currentWeapon->m_definition->m_meleeCount > 0)
     {
         if (distanceToTarget < controlledActor->m_currentWeapon->m_definition->m_meleeRange + targetActor->m_physicalRadius)
+        {
             controlledActor->m_currentWeapon->Fire();
+            controlledActor->PlayAnimationByName(m_state,true);
+        }
     }
     /*else
     {
