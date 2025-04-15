@@ -156,7 +156,7 @@ Game::Game()
     ///
 
     /// Player controller
-    m_player = new PlayerController(m_map, Vec3(2.5f, 8.5, 0.5f));
+    //m_player = new PlayerController(m_map, Vec3(2.5f, 8.5, 0.5f));
 
     /// Debug Drawing
 #ifdef DEBUG_GRID
@@ -228,8 +228,10 @@ void Game::Render() const
     g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
     g_theRenderer->SetDepthMode(DepthMode::READ_WRITE_LESS_EQUAL);
     g_theWidgetSubsystem->Render();
+    
     if (m_currentState == GameState::PLAYING)
     {
+        m_player->Render();
         g_theRenderer->BeingCamera(*m_player->m_camera);
         m_map->Render();
         g_theRenderer->EndCamera(*m_player->m_camera);
@@ -376,7 +378,9 @@ bool Game::GameStartEvent(EventArgs& args)
     g_theInput->SetCursorMode(CursorMode::FPS);
 
     std::string defaultMapName = g_gameConfigBlackboard.GetValue("defaultMap", "Default");
+    g_theGame->m_player        = new PlayerController(nullptr);
     m_game->m_map              = new Map(m_game, MapDefinition::GetByName(defaultMapName));
+    g_theGame->m_player->m_map = m_game->m_map;
     return true;
 }
 

@@ -65,7 +65,7 @@ public: /// Game State
     Camera* m_screenCamera = nullptr;
 
     // Space for both world and screen, camera needs them
-    AABB2 m_screenSpace;
+    AABB2 m_screenSpace; // TODO: screen space need recalculate based on num of player.
     AABB2 m_worldSpace;
 
     /// Clock
