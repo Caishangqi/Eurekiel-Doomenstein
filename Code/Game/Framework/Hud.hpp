@@ -14,7 +14,7 @@ public:
     Hud(XmlElement const& hudElement);
     ~Hud();
     Animation* GetAnimationByName(std::string const& animationName);
-
+    std::vector<Animation> GetAnimations();
 public:
     std::string m_name           = "Default";
     Shader*     m_shader         = nullptr;

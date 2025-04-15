@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Engine/Math/Vec3.hpp"
 
+class Timer;
+class Animation;
 class Actor;
 class WeaponDefinition;
 
@@ -31,8 +33,18 @@ public:
     /// @return 
     EulerAngles GetRandomDirectionInCone(EulerAngles weaponOrientation, float degreeOfVariation);
 
+    void Update(float deltaSeconds);
+    void UpdateAnimation(float deltaSeconds);
+
+    Animation* PlayAnimationByName(std::string animationName, bool force = false);
+    
+    void Render() const;
+
 protected:
     Actor*                  m_owner        = nullptr;
     const WeaponDefinition* m_definition   = nullptr;
     float                   m_lastFireTime = 0.f;
+
+    Animation* m_currentPlayingAnimation = nullptr;
+    Timer*     m_animationTimer          = nullptr;
 };

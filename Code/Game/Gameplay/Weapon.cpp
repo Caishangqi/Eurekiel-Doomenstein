@@ -2,6 +2,7 @@
 
 #include "Actor.hpp"
 #include "Engine/Core/Clock.hpp"
+#include "Engine/Core/Timer.hpp"
 #include "Engine/Math/MathUtils.hpp"
 #include "Engine/Math/RandomNumberGenerator.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
@@ -9,6 +10,7 @@
 #include "Game/GameCommon.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Definition/WeaponDefinition.hpp"
+#include "Game/Framework/Controller.hpp"
 
 Weapon::Weapon(const WeaponDefinition* definition, Actor* owner): m_definition(definition), m_owner(owner)
 {
@@ -30,7 +32,8 @@ void Weapon::Fire()
     if (m_timeSinceLastFire > m_definition->m_refireTime)
     {
         printf("Weapon::Fire    Weapon fired by %s\n", m_owner->m_definition->m_name.c_str());
-        m_lastFireTime = m_currentFireTime;
+        m_owner->m_controller->m_state = "Attack";
+        m_lastFireTime                 = m_currentFireTime;
         /// Fire logic here
         while (rayCount > 0)
         {
@@ -135,4 +138,72 @@ EulerAngles Weapon::GetRandomDirectionInCone(EulerAngles weaponOrientation, floa
     float       variationRow   = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
     EulerAngles newDirection   = EulerAngles(weaponOrientation.m_yawDegrees + variationYaw, weaponOrientation.m_pitchDegrees + variationPitch, weaponOrientation.m_rollDegrees + variationRow);
     return newDirection;
+}
+
+void Weapon::Update(float deltaSeconds)
+{
+    UpdateAnimation(deltaSeconds);
+}
+
+void Weapon::UpdateAnimation(float deltaSeconds)
+{
+    UNUSED(deltaSeconds)
+    if (!m_currentPlayingAnimation)
+        return;
+    if (m_animationTimer->GetElapsedTime() > m_currentPlayingAnimation->GetAnimationLength())
+    {
+        m_currentPlayingAnimation = nullptr;
+        m_animationTimer->Stop();
+    }
+}
+
+Animation* Weapon::PlayAnimationByName(std::string animationName, bool force)
+{
+    Animation* weaponAnim = m_definition->m_hud->GetAnimationByName(animationName);
+    if (weaponAnim)
+    {
+        if (weaponAnim == m_currentPlayingAnimation)
+        {
+            return weaponAnim;
+        }
+        else
+        {
+            /// We want to replace to new animation, force update it whether or not it finished
+            if (force)
+            {
+                m_currentPlayingAnimation = weaponAnim;
+                m_animationTimer->Start();
+                return weaponAnim;
+            }
+            else
+            {
+                if (m_currentPlayingAnimation)
+                {
+                    bool isCurrentAnimFinished = m_animationTimer->GetElapsedTime() >= m_currentPlayingAnimation->GetAnimationLength();
+                    if (isCurrentAnimFinished)
+                    {
+                        m_currentPlayingAnimation = weaponAnim;
+                        m_animationTimer->Start();
+                        return weaponAnim;
+                    }
+                }
+                else
+                {
+                    m_currentPlayingAnimation = weaponAnim;
+                    m_animationTimer->Start();
+                    return weaponAnim;
+                }
+            }
+        }
+    }
+    return nullptr;
+}
+
+void Weapon::Render() const
+{
+    Animation* animation = m_currentPlayingAnimation;
+    if (animation == nullptr && (int)m_definition->m_hud->GetAnimations().size() > 0) // We use the index 0 animation group
+    {
+        animation = &m_definition->m_hud->GetAnimations()[0];
+    }
 }

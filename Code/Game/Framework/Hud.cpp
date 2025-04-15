@@ -47,3 +47,8 @@ Animation* Hud::GetAnimationByName(std::string const& animationName)
     }
     return nullptr;
 }
+
+std::vector<Animation> Hud::GetAnimations()
+{
+    return m_animations;
+}

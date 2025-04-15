@@ -21,7 +21,6 @@ h.	The player controller should not be able to move, aim, or fire while the acto
 class PlayerController : public Controller
 {
 public:
-    
     PlayerController(Map* map);
     PlayerController(Map* map, Vec3 position, EulerAngles orientation = EulerAngles());
     ~PlayerController() override;
@@ -29,12 +28,13 @@ public:
     void Possess(ActorHandle& actorHandle) override;
 
     void Update(float deltaSeconds) override;
+    void UpdateWeapon(float deltaSeconds);
     void UpdateInput(float deltaSeconds); // Perform input processing for controlling actors and free-fly camera mode.
     void UpdateCamera(float deltaSeconds); // Update our camera settings, taking in to account actor eye height and field of vision.
     void Render() const;
 
     void HandleActorDead(float deltaSeconds);
-    
+
     Mat44 GetModelToWorldTransform() const;
 
 public:
@@ -42,6 +42,7 @@ public:
     Vec3        m_position; // 3D position, separate from our actor so that we have a transform for the free-fly camera, as a Vec3, in world units.
     EulerAngles m_orientation; // 3D orientation, separate from our actor so that we have a transform for the free-fly camera, as EulerAngles, in degrees.
     bool        m_bCameraMode = false; // Toggles whether we are controlling an actor or a free-fly camera currently.
+    AABB2       m_viewport; // viewport size
 private:
     float m_speed    = 2.0f;
     float m_turnRate = 0.075f;

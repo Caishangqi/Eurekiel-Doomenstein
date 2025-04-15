@@ -51,7 +51,24 @@ void PlayerController::Update(float deltaSeconds)
     UpdateDebugMessage();
     HandleRayCast();
     UpdateInput(deltaSeconds);
+    UpdateWeapon(deltaSeconds);
     UpdateCamera(deltaSeconds);
+}
+
+void PlayerController::UpdateWeapon(float deltaSeconds)
+{
+    if (g_theGame->m_currentState != GameState::PLAYING)
+        return;
+    if (!m_actorHandle.IsValid())
+        return;
+    if (m_bCameraMode)
+        return;
+    Actor* possessActor = m_map->GetActorByHandle(m_actorHandle);
+    if (possessActor->m_definition->m_name == "Marine")
+    {
+        if (possessActor->m_currentWeapon)
+            possessActor->m_currentWeapon->Update(deltaSeconds);
+    }
 }
 
 void PlayerController::UpdateInput(float deltaSeconds)
@@ -151,6 +168,9 @@ void PlayerController::UpdateInput(float deltaSeconds)
             int newIndex = (int)index % possessActor->m_weapons.size();
             possessActor->EquipWeapon(newIndex);
         }
+
+        m_position    = possessActor->m_position;
+        m_orientation = possessActor->m_orientation;
     }
     else
     {
@@ -263,6 +283,18 @@ void PlayerController::UpdateCamera(float deltaSeconds)
 void PlayerController::Render() const
 {
     g_theRenderer->BeingCamera(*m_camera);
+    if (g_theGame->m_currentState != GameState::PLAYING)
+        return;
+    if (!m_actorHandle.IsValid())
+        return;
+    if (m_bCameraMode)
+        return;
+    Actor* possessActor = m_map->GetActorByHandle(m_actorHandle);
+    if (possessActor->m_definition->m_name == "Marine")
+    {
+        if (possessActor->m_currentWeapon)
+            possessActor->m_currentWeapon->Render();
+    }
     g_theRenderer->EndCamera(*m_camera);
 }
 
