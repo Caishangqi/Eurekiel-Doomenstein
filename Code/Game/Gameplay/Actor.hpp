@@ -17,6 +17,7 @@ class Controller;
 class AIController;
 class Weapon;
 class Map;
+class PlayerController;
 class ActorDefinition;
 class AABB3;
 class AABB2;
@@ -70,8 +71,9 @@ private:
     std::vector<Vertex_PCU> m_vertexesConeWireframe;
     Texture*                m_texture = nullptr;
 
-    AnimationGroup* m_currentPlayingAnimationGroup = nullptr;
-    Timer*          m_animationTimer               = nullptr;
+    AnimationGroup* m_currentPlayingAnimationGroup  = nullptr;
+    Timer*          m_animationTimer                = nullptr;
+    float           m_animationTimerSpeedMultiplier = 1.f;
 
 public:
     /// After we inject the map pointer and other handle etc, we perform post initialize
@@ -125,7 +127,8 @@ public:
     void Attack(); // Fire our currently equipped weapon.
 
     Vec3  GetActorEyePosition();
-    void  Render() const;
+    void  Render(PlayerController* toPlayer) const;
+    bool  PredicateRender(PlayerController* toPlayer) const; /// Predicate whether or not we render actor
     Mat44 GetModelToWorldTransform() const;
 
     /// AI

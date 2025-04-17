@@ -94,6 +94,8 @@ void Actor::PostInitialize()
     }
     m_currentWeapon  = m_weapons.empty() ? nullptr : m_weapons[0];
     m_animationTimer = new Timer(0, g_theGame->m_clock); // Create timer
+    if (m_definition->m_dieOnSpawn)
+        SetActorDead();
 }
 
 void Actor::Update(float deltaSeconds)
@@ -128,6 +130,8 @@ void Actor::UpdateAnimation(float deltaSeconds)
         m_currentPlayingAnimationGroup = nullptr;
         m_animationTimer->Stop();
     }
+    if (m_definition->m_runSpeed != 0.f) // Zero safe check
+        m_animationTimerSpeedMultiplier = m_velocity.GetLength() / m_definition->m_runSpeed;
 }
 
 void Actor::UpdatePhysics(float deltaSeconds)
@@ -268,7 +272,7 @@ void Actor::OnColliedEnter(AABB2& tileXYBound)
         Vec2 pos2D         = Vec2(m_position.x, m_position.y);
         bool colliedWithXY = PushDiscOutOfAABB2D(pos2D, m_physicalRadius, tileXYBound);
         if (colliedWithXY && m_definition->m_dieOnCollide)
-            m_bIsDead = true;
+            SetActorDead();
         m_position = Vec3(pos2D.x, pos2D.y, m_position.z);
     }
 }
@@ -283,7 +287,7 @@ void Actor::OnColliedEnter(AABB3& tileXYZBound)
         if (zCylinderMaxZ > tileXYZBound.m_maxs.z || zCylinderMinZ < tileXYZBound.m_mins.z)
         {
             if (m_definition->m_dieOnCollide)
-                m_bIsDead = true;
+                SetActorDead();
         }
         if (zCylinderMaxZ > tileXYZBound.m_maxs.z)
         {
@@ -313,6 +317,7 @@ void Actor::Damage(float damage, ActorHandle instigator)
 bool Actor::SetActorDead(bool bNewDead)
 {
     m_bIsDead = bNewDead;
+    PlayAnimationByName("Death", true);
     for (Vertex_PCU& m_vertex : m_vertexes)
     {
         m_vertex.m_color = m_vertex.m_color * 0.4f;
@@ -355,15 +360,10 @@ Vec3 Actor::GetActorEyePosition()
     return m_position + Vec3(0, 0, m_definition->m_eyeHeight);
 }
 
-void Actor::Render() const
+void Actor::Render(PlayerController* toPlayer) const
 {
-    if (!m_definition->m_visible) return; // Check if visible. If not, return.
-    if (m_controller && dynamic_cast<PlayerController*>(m_controller)) // Check if we are the rendering player and not in free fly mode. If so, return.
-    {
-        PlayerController* playerController = dynamic_cast<PlayerController*>(m_controller);
-        if (!playerController->m_bCameraMode)
-            return;
-    }
+    if (!PredicateRender(toPlayer))
+        return;
     Mat44 localToWorldMat;
     if (m_definition->m_billboardType == "None")
         localToWorldMat = GetModelToWorldTransform();
@@ -371,10 +371,22 @@ void Actor::Render() const
     {
         if (m_definition->m_billboardType == "WorldUpFacing")
         {
-            Mat44 cameraTransform = Mat44::MakeTranslation3D(g_theGame->m_player->m_position);
-            cameraTransform.Append(g_theGame->m_player->m_orientation.GetAsMatrix_IFwd_JLeft_KUp());
+            Mat44 cameraTransform = Mat44::MakeTranslation3D(toPlayer->m_position);
+            cameraTransform.Append(toPlayer->m_orientation.GetAsMatrix_IFwd_JLeft_KUp());
             localToWorldMat = Mat44::MakeTranslation3D(m_position);
             localToWorldMat.Append(GetBillboardTransform(BillboardType::WORLD_UP_FACING, cameraTransform, m_position));
+        }
+        else if (m_definition->m_billboardType == "FullOpposing")
+        {
+            Mat44 cameraTransform = Mat44::MakeTranslation3D(toPlayer->m_position);
+            cameraTransform.Append(toPlayer->m_orientation.GetAsMatrix_IFwd_JLeft_KUp());
+            localToWorldMat.Append(GetBillboardTransform(BillboardType::FULL_OPPOSING, cameraTransform, m_position));
+        }
+        else if (m_definition->m_billboardType == "WorldUpOpposing")
+        {
+            Mat44 cameraTransform = Mat44::MakeTranslation3D(toPlayer->m_position);
+            cameraTransform.Append(toPlayer->m_orientation.GetAsMatrix_IFwd_JLeft_KUp());
+            localToWorldMat.Append(GetBillboardTransform(BillboardType::WORLD_UP_OPPOSING, cameraTransform, m_position));
         }
         else
         {
@@ -383,7 +395,7 @@ void Actor::Render() const
     }
 
     /// Get facing sprite UVs.
-    Vec3 dirCameraToActor = (m_position - g_theGame->m_player->m_position).GetXY().GetNormalized().GetAsVec3();
+    Vec3 dirCameraToActor = (m_position - toPlayer->m_position).GetXY().GetNormalized().GetAsVec3();
     Vec3 viewingDirection = GetModelToWorldTransform().GetOrthonormalInverse().TransformVectorQuantity3D(dirCameraToActor);
 
     AnimationGroup* animationGroup = m_currentPlayingAnimationGroup;
@@ -393,7 +405,7 @@ void Actor::Render() const
     }
 
     const SpriteAnimDefinition* anim         = &animationGroup->GetSpriteAnimation(viewingDirection);
-    const SpriteDefinition      spriteAtTime = anim->GetSpriteDefAtTime(m_animationTimer->GetElapsedTime());
+    const SpriteDefinition      spriteAtTime = anim->GetSpriteDefAtTime(m_animationTimer->GetElapsedTime() * 1); // TODO: Handle animation speed.
     AABB2                       uvAtTime     = spriteAtTime.GetUVs();
 
 
@@ -417,7 +429,7 @@ void Actor::Render() const
         else
         {
             vertexesUnlit.reserve(8192);
-            AddVertsForQuad3D(vertexesUnlit, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, uvAtTime);
+            AddVertsForQuad3D(vertexesLit, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, uvAtTime);
         }
         g_theRenderer->SetModelConstants(localToWorldMat, Rgba8::WHITE);
         g_theRenderer->BindShader(m_definition->m_shader);
@@ -425,6 +437,21 @@ void Actor::Render() const
         g_theRenderer->SetLightConstants(m_map->m_sunDirection, m_map->m_sunIntensity, m_map->m_ambientIntensity);
         g_theRenderer->BindTexture(&spriteAtTime.GetTexture());
         g_theRenderer->DrawVertexArray(vertexesLit);
+        return;
+    }
+
+    if (!bIsLit)
+    {
+        vertexesUnlit.reserve(8192);
+        AddVertsForQuad3D(vertexesUnlit, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, uvAtTime);
+        g_theRenderer->SetModelConstants(localToWorldMat, Rgba8::WHITE);
+        g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_NONE); // TODO: fix the SOLID_CULL_BACK triangle issue
+        g_theRenderer->BindShader(m_definition->m_shader);
+        g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
+        g_theRenderer->BindTexture(&spriteAtTime.GetTexture());
+        ///g_theRenderer->BindTexture(nullptr);
+        g_theRenderer->DrawVertexArray(vertexesUnlit);
+        g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_BACK);
         return;
     }
 
@@ -440,6 +467,20 @@ void Actor::Render() const
     if (!m_owner)
         g_theRenderer->DrawVertexArray(m_vertexesConeWireframe);
     g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_BACK);
+}
+
+bool Actor::PredicateRender(PlayerController* toPlayer) const
+{
+    if (!m_definition->m_visible) return false; // Check if visible. If not, return.
+    if (m_controller && dynamic_cast<PlayerController*>(m_controller)) // Check if we are the rendering player and not in free fly mode. If so, return.
+    {
+        PlayerController* playerController = dynamic_cast<PlayerController*>(m_controller);
+        if (g_theGame->GetIsSingleMode() && !playerController->m_bCameraMode) // If we in single mode and in free cam mode we do not render actor
+            return false;
+        if (playerController == toPlayer && !playerController->m_bCameraMode) // If we equal to self and in free cam mode we do not render actor
+            return false;
+    }
+    return true;
 }
 
 Mat44 Actor::GetModelToWorldTransform() const
