@@ -46,9 +46,13 @@ Map::Map(Game* game, const MapDefinition* definition): m_game(game), m_definitio
     {
         SpawnActor(spawnInfo);
     }
-    Actor* playerActor = SpawnPlayer(m_game->m_player);
-    m_game->m_player->Possess(playerActor->m_handle);
-    /// 
+    
+    for (PlayerController* controller : g_theGame->m_localPlayerControllers)
+    {
+        Actor* playerActor = SpawnPlayer(controller);
+        controller->Possess(playerActor->m_handle);
+    }
+    ///
 }
 
 Map::~Map()
@@ -350,7 +354,7 @@ void Map::PushActorOutOfTile(Actor* actor, const IntVec2& tileCoords)
     }
 }
 
-void Map::Render()
+void Map::Render(PlayerController* toPlayer)
 {
     g_theRenderer->SetModelConstants(Mat44(), Rgba8::WHITE);
     g_theRenderer->BindShader(m_shader);
@@ -362,7 +366,7 @@ void Map::Render()
     {
         if (actor && actor->m_handle.IsValid() && actor->m_definition->m_visible)
         {
-            actor->Render();
+            actor->Render(toPlayer);
         }
     }
 }
@@ -745,8 +749,10 @@ Actor* Map::SpawnPlayer(PlayerController* playerController)
     spawnInfo.m_actorName = "Marine";
     std::vector<Actor*> spawnPoints;
     GetActorsByName(spawnPoints, "SpawnPoint");
-    Actor* spawnPoint       = spawnPoints[g_rng->RollRandomIntInRange(0, (int)spawnPoints.size() - 1)];
-    spawnInfo.m_position    = spawnPoint->m_position;
+    int randomIndex = g_rng->RollRandomIntInRange(0, (int)spawnPoints.size() - 1);
+    Actor* spawnPoint    = spawnPoints[randomIndex];
+    spawnInfo.m_position = spawnPoint->m_position;
+    //spawnPoint->m_orientation.m_yawDegrees = -90;
     spawnInfo.m_orientation = Vec3(spawnPoint->m_orientation);
     spawnInfo.m_velocity    = spawnPoint->m_velocity;
     Actor* playerActor      = SpawnActor(spawnInfo);
@@ -756,11 +762,14 @@ Actor* Map::SpawnPlayer(PlayerController* playerController)
 
 void Map::CheckAndRespawnPlayer()
 {
-    if (!m_game->m_player->GetActor())
+    for (PlayerController* controller : g_theGame->m_localPlayerControllers)
     {
-        Actor* playerActor = SpawnPlayer(m_game->m_player);
-        printf("Map::CheckAndRespawnPlayer      Player spawned at: (%f, %f, %f)\n", playerActor->m_position.x, playerActor->m_position.y, playerActor->m_position.z);
-        m_game->m_player->Possess(playerActor->m_handle);
+        if (!controller->GetActor())
+        {
+            Actor* playerActor = SpawnPlayer(controller);
+            printf("Map::CheckAndRespawnPlayer      Player spawned at: (%f, %f, %f)\n", playerActor->m_position.x, playerActor->m_position.y, playerActor->m_position.z);
+            controller->Possess(playerActor->m_handle);
+        }
     }
 }
 
@@ -892,7 +901,9 @@ void Map::GetActorsByName(std::vector<Actor*>& inActors, const std::string& name
 
 Actor* Map::DebugPossessNext()
 {
-    PlayerController* playerController = m_game->m_player;
+    if (!m_game->GetIsSingleMode())
+        return nullptr;
+    PlayerController* playerController = m_game->m_localPlayerControllers[0];
     if (!playerController)
         return nullptr;
     Actor* playerControlledActor = playerController->GetActor();
