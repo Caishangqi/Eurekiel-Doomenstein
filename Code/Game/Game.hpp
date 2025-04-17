@@ -28,13 +28,23 @@ public:
     void EndFrame();
 
     /// Event Handle
-    STATIC bool GameStartEvent(EventArgs& args);
     STATIC bool GameExitEvent(EventArgs& args);
+    STATIC bool GameStateChangeEvent(EventArgs& args);
     /// 
+
+    /// Controller and Multiplayer
+    PlayerController* CreateLocalPlayer(int id, DeviceType deviceType); // Create local player by unique id and expect device type, return null if id is identical.
+    void              RemoveLocalPlayer(int id); // Remove local player by its unique id and automatically shrink the controller container.
+    PlayerController* GetLocalPlayer(int id); // Return the PlayerController with specific controller id.
+    PlayerController* GetControllerByDeviceType(DeviceType deviceType); // Return the first found controller that has the specific device type.
+    bool              GetIsSingleMode() const;
 
     /// Game State
     void EnterState(GameState state);
     void ExitState(GameState state);
+    void EnterAttractState();
+    void EnterLobbyState();
+    void EnterPlayingState();
     /// 
 
     void HandleKeyBoardEvent(float deltaTime);
@@ -43,13 +53,6 @@ public:
     // Camera
     void UpdateCameras(float deltaTime);
 
-    // Grid
-    void RenderGrids() const;
-    void RenderProps() const;
-
-private:
-    void RenderEntities() const;
-    void HandleEntityCollisions();
 
 public: /// Game State
     GameState m_currentState = GameState::ATTRACT;
@@ -73,43 +76,6 @@ public: /// Game State
     /// 
 
     /// PlayerController
-    PlayerController* m_player = nullptr;
+    std::vector<PlayerController*> m_localPlayerControllers;
     /// 
-
-    /// Cube
-    Prop* m_cube   = nullptr;
-    Prop* m_cube_1 = nullptr;
-    ///
-
-    /// Test Obj
-    Prop* m_testProp       = nullptr;
-    bool  m_bEnableTestObj = false;
-    bool  m_bEnableGrid    = false;
-    /// 
-
-    /// Balls
-    Prop* m_ball = nullptr;
-    /// 
-
-    /// Grid
-    Prop*              m_grid_x = nullptr;
-    Prop*              m_grid_y = nullptr;
-    std::vector<Prop*> m_grid_x_unit_5;
-    std::vector<Prop*> m_grid_x_unit_1;
-    std::vector<Prop*> m_grid_y_unit_5;
-    std::vector<Prop*> m_grid_y_unit_1;
-    /// 
-
-    /// Display Only
-private:
-#ifdef COSMIC
-    float FluctuateValue(float value, float amplitude, float frequency, float deltaTime)
-    {
-        return value + amplitude * sinf(frequency * deltaTime);
-    }
-
-    float m_iconCircleRadius           = 200;
-    float m_currentIconCircleThickness = 0.f;
-    int   m_counter                    = 0;
-#endif
 };
