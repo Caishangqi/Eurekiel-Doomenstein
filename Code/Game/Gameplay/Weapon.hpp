@@ -42,6 +42,7 @@ public:
     void Render() const;
     void RenderWeaponBase() const;
     void RenderWeaponReticle() const;
+    void RenderWeaponHudText() const;
     void RenderWeaponAnim() const;
 
 protected:

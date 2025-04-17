@@ -6,6 +6,7 @@
 #include "Engine/Core/VertexUtils.hpp"
 #include "Engine/Math/MathUtils.hpp"
 #include "Engine/Math/RandomNumberGenerator.hpp"
+#include "Engine/Renderer/Camera.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
 #include "Engine/Renderer/SpriteDefinition.hpp"
@@ -15,11 +16,12 @@
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Definition/WeaponDefinition.hpp"
 #include "Game/Framework/Controller.hpp"
+#include "Game/Framework/PlayerController.hpp"
+#include "Save/PlayerSaveSubsystem.hpp"
 
 Weapon::Weapon(const WeaponDefinition* definition, Actor* owner): m_definition(definition), m_owner(owner)
 {
     m_animationTimer = new Timer(0, g_theGame->m_clock);
-
 
     /// Init hud base bound
     if (m_definition->m_hud != nullptr)
@@ -52,6 +54,13 @@ void Weapon::Fire()
         {
             PlayAnimationByName("Attack");
         }
+        /// Handle player fire animation logic
+        PlayerController* player = dynamic_cast<PlayerController*>(m_owner->m_controller);
+        if (player)
+        {
+            player->GetActor()->PlayAnimationByName("Attack");
+        }
+        /// End of Handle player fire animation logic.
         m_lastFireTime = m_currentFireTime;
         /// Fire logic here
         while (rayCount > 0)
@@ -64,20 +73,31 @@ void Weapon::Fire()
             Vec3        startPosGraphic = startPos - Vec3(0, 0, 0.2f);
             randomDirection.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
             RaycastResult3D raycastResult = m_owner->m_map->RaycastAll(m_owner, hitActorHandle, startPos, forward, m_definition->m_rayRange);
+            Actor*          hitActor      = m_owner->m_map->GetActorByHandle(hitActorHandle);
             if (raycastResult.m_didImpact)
             {
+                if (!hitActor)
+                {
+                    SpawnInfo particleSpawnInfo;
+                    particleSpawnInfo.m_position  = raycastResult.m_impactPos;
+                    particleSpawnInfo.m_actorName = "BulletHit";
+                    g_theGame->m_map->SpawnActor(particleSpawnInfo);
+                }
                 DebugAddWorldCylinder(startPosGraphic, raycastResult.m_impactPos, 0.01f, 10.f, Rgba8::YELLOW, Rgba8::YELLOW, DebugRenderMode::X_RAY);
             }
             else
             {
                 DebugAddWorldCylinder(startPosGraphic, raycastResult.m_rayStartPos + raycastResult.m_rayFwdNormal * rayRange, 0.01f, 10.f, Rgba8::YELLOW, Rgba8::YELLOW, DebugRenderMode::X_RAY);
             }
-            Actor* hitActor = m_owner->m_map->GetActorByHandle(hitActorHandle);
             if (hitActor && hitActor->m_handle.IsValid())
             {
                 float damage = g_rng->RollRandomFloatInRange(m_definition->m_rayDamage.m_min, m_definition->m_rayDamage.m_max);
                 hitActor->Damage(damage, m_owner->m_handle);
                 hitActor->AddImpulse(m_definition->m_rayImpulse * forward);
+                SpawnInfo particleSpawnInfo;
+                particleSpawnInfo.m_position  = raycastResult.m_impactPos;
+                particleSpawnInfo.m_actorName = "BloodSplatter";
+                g_theGame->m_map->SpawnActor(particleSpawnInfo);
             }
             rayCount--;
         }
@@ -225,6 +245,7 @@ void Weapon::Render() const
     RenderWeaponBase();
     RenderWeaponReticle();
     RenderWeaponAnim();
+    RenderWeaponHudText();
 }
 
 void Weapon::RenderWeaponBase() const
@@ -245,15 +266,45 @@ void Weapon::RenderWeaponReticle() const
     std::vector<Vertex_PCU> vertexes;
     vertexes.reserve(1024);
     /// Reticle
+    Texture* reticleTexture   = m_definition->m_hud->m_reticleTexture;
+    Vec2     reticleDimension = reticleTexture->GetDimensions();
 
-    Texture* reticleTexture      = m_definition->m_hud->m_reticleTexture;
-    IntVec2  reticleDimension    = reticleTexture->GetDimensions();
-    Vec2     reticleSpriteOffSet = -Vec2(reticleDimension) * m_definition->m_hud->m_spritePivot;
-    AABB2    reticleBound        = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f), (Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f) + Vec2(reticleDimension)));
-    //reticleBound.m_maxs += reticleSpriteOffSet;
+    Vec2  reticleSpriteOffSet = -reticleDimension * m_definition->m_hud->m_spritePivot;
+    AABB2 reticleBound        = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f), (Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f) + Vec2(reticleDimension)));
+
+    /// Change the dimension base on split screen y
+    Vec2  dim            = reticleBound.GetDimensions();
+    AABB2 screenViewport = m_owner->m_controller->m_screenViewport;
+    float multiplier     = g_theGame->m_screenSpace.GetDimensions().y / screenViewport.GetDimensions().y;
+    dim.x /= multiplier;
+    reticleBound.SetDimensions(dim);
+    /// End of Change
+
     AddVertsForAABB2D(vertexes, reticleBound, Rgba8::WHITE);
     g_theRenderer->BindTexture(reticleTexture);
     g_theRenderer->DrawVertexArray(vertexes);
+}
+
+void Weapon::RenderWeaponHudText() const
+{
+    g_theRenderer->BindTexture(nullptr);
+    PlayerController* player = dynamic_cast<PlayerController*>(m_owner->m_controller);
+    if (!player) return;
+    std::vector<Vertex_PCU> vertexes;
+    vertexes.reserve(1024);
+    BitmapFont* g_testFont     = g_theRenderer->CreateOrGetBitmapFont("Data/Fonts/SquirrelFixedFont");
+    AABB2       boundingBox    = m_hudBaseBound;
+    Vec2        dim            = boundingBox.GetDimensions();
+    AABB2       screenViewport = m_owner->m_controller->m_screenViewport;
+    float       multiplier     = g_theGame->m_screenSpace.GetDimensions().y / screenViewport.GetDimensions().y;
+    g_testFont->AddVertsForTextInBox2D(vertexes, Stringf("%d", (int)m_owner->m_health), boundingBox, 40.f, Rgba8::WHITE, 1 / multiplier, Vec2(0.29f, 0.5f));
+    g_testFont->AddVertsForTextInBox2D(vertexes, Stringf("%d", PlayerSaveSubsystem::GetPlayerSaveData(player->m_index)->m_numOfKilled), boundingBox, 40.f, Rgba8::WHITE, 1 / multiplier,
+                                       Vec2(0.05f, 0.5f));
+    g_testFont->AddVertsForTextInBox2D(vertexes, Stringf("%d", PlayerSaveSubsystem::GetPlayerSaveData(player->m_index)->m_numOfDeaths), boundingBox, 40.f, Rgba8::WHITE, 1 / multiplier,
+                                       Vec2(0.95f, 0.5f));
+    g_theRenderer->BindTexture(&g_testFont->GetTexture());
+    g_theRenderer->DrawVertexArray(vertexes);
+    g_theRenderer->BindTexture(nullptr);
 }
 
 void Weapon::RenderWeaponAnim() const
@@ -273,6 +324,15 @@ void Weapon::RenderWeaponAnim() const
 
     IntVec2 boundSize = m_definition->m_hud->m_spriteSize;
     AABB2   bound     = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f), Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f) + Vec2(boundSize));
+
+    /// Change the dimension base on split screen y
+    Vec2  dim            = bound.GetDimensions();
+    AABB2 screenViewport = m_owner->m_controller->m_screenViewport;
+    float multiplier     = g_theGame->m_screenSpace.GetDimensions().y / screenViewport.GetDimensions().y;
+    dim.x /= multiplier;
+    bound.SetDimensions(dim);
+    /// End of Change
+
     bound.m_mins += spriteOffSet;
     bound.m_maxs += spriteOffSet;
     bound.Translate(Vec2(0, m_hudBaseBound.m_maxs.y)); // Shitty hardcode
