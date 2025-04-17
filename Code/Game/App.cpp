@@ -69,6 +69,9 @@ void App::Startup()
     debugRenderConfig.m_renderer = g_theRenderer;
 
     WidgetSystemConfig widgetSystemConfig;
+    widgetSystemConfig.m_viewportCamera         = new Camera();
+    widgetSystemConfig.m_viewportCamera->m_mode = eMode_Orthographic;
+    widgetSystemConfig.m_viewportCamera->SetOrthographicView(Vec2::ZERO, Vec2(g_gameConfigBlackboard.GetValue("screenSizeX", 1600.f), g_gameConfigBlackboard.GetValue("screenSizeY", 800.f)));
     g_theWidgetSubsystem = new WidgetSubsystem(widgetSystemConfig);
 
     DevConsoleConfig consoleConfig;
