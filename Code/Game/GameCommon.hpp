@@ -5,6 +5,7 @@
 #define COSMIC
 //#define DEBUG_GRID
 
+
 struct Vertex_PCU;
 struct Rgba8;
 struct Vec2;
@@ -25,6 +26,7 @@ extern AudioSystem*           g_theAudio;
 extern Game*                  g_theGame;
 extern WidgetSubsystem*       g_theWidgetSubsystem;
 
+
 /// Loaders
 
 /// 
@@ -43,6 +45,22 @@ constexpr int GRID_SIZE      = 50; // Half
 constexpr int GRID_UNIT_SIZE = 5;
 /// 
 
+/// Enums
+enum class DeviceType
+{
+    KEYBOARD_AND_MOUSE = 0,
+    CONTROLLER = 1,
+};
+
+inline const char* to_string(DeviceType e)
+{
+    switch (e)
+    {
+    case DeviceType::KEYBOARD_AND_MOUSE: return "Keyboard and Mouse";
+    case DeviceType::CONTROLLER: return "Controller";
+    default: return "unknown";
+    }
+}
 
 void DebugDrawRing(const Vec2& center, float radius, float thickness, const Rgba8& color);
 
