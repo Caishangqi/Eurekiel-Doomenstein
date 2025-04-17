@@ -30,9 +30,19 @@ WidgetSubsystem::~WidgetSubsystem()
 
 void WidgetSubsystem::BeginFrame()
 {
+    for (int i = 0; i < (int)m_widgets.size(); ++i)
+    {
+        if (m_widgets[i] && m_widgets[i]->m_bIsGarbage)
+        {
+            delete m_widgets[i];
+            m_widgets[i] = nullptr;
+        }
+    }
+
     for (Widget* widget : m_widgets)
     {
-        widget->BeginFrame();
+        if (widget)
+            widget->BeginFrame();
     }
 }
 
@@ -56,7 +66,8 @@ void WidgetSubsystem::Update()
 {
     for (Widget* widget : m_widgets)
     {
-        widget->Update();
+        if (widget && !widget->m_bIsGarbage)
+            widget->Update();
     }
 }
 
@@ -64,7 +75,8 @@ void WidgetSubsystem::Render()
 {
     for (Widget* widget : m_widgets)
     {
-        widget->Render();
+        if (widget && !widget->m_bIsGarbage)
+            widget->Render();
     }
 }
 
@@ -72,19 +84,46 @@ void WidgetSubsystem::EndFrame()
 {
     for (Widget* widget : m_widgets)
     {
-        widget->EndFrame();
+        if (widget)
+            widget->EndFrame();
     }
 }
 
 void WidgetSubsystem::AddToViewport(Widget* widget, int zOrder)
 {
+    printf("WidgetSubsystem::AddToViewport      Add widget %s\n", widget->GetName().c_str());
     widget->m_zOrder = zOrder;
-    m_widgets.insert(widget);
+    m_widgets.push_back(widget);
 }
 
 void WidgetSubsystem::AddToPlayerViewport(Widget* widget, PlayerController* player, int zOrder)
 {
+    printf("WidgetSubsystem::AddToPlayerViewport        Add widget %s to player viewport\n", widget->GetName().c_str());
     widget->m_zOrder = zOrder;
     widget->m_owner  = player;
-    m_widgets.insert(widget);
+    m_widgets.push_back(widget);
+}
+
+void WidgetSubsystem::RemoveFromViewport(Widget* widget)
+{
+    for (Widget* m_widget : m_widgets)
+    {
+        if (m_widget == widget)
+        {
+            printf("WidgetSubsystem::RemoveFromViewport        Remove widget %s\n", widget->GetName().c_str());
+            m_widget->RemoveFromViewport();
+        }
+    }
+}
+
+void WidgetSubsystem::RemoveFromViewport(std::string widgetName)
+{
+    for (Widget* widget : m_widgets)
+    {
+        if (widget && widget->m_name == widgetName)
+        {
+            printf("WidgetSubsystem::RemoveFromViewport        Remove widget %s\n", widget->GetName().c_str());
+            widget->RemoveFromViewport();
+        }
+    }
 }

@@ -3,14 +3,16 @@
 #include <string>
 
 #include "Engine/Core/Clock.hpp"
+#include "Engine/Renderer/Camera.hpp"
 
 class Widget;
 class PlayerController;
 
 struct WidgetSystemConfig
 {
-    Clock*      m_clock       = nullptr;
-    std::string m_defaultName = "Untitled";
+    Clock*      m_clock          = nullptr;
+    std::string m_defaultName    = "Untitled";
+    Camera*     m_viewportCamera = nullptr;
 };
 
 struct DescendingZOrderPtr
@@ -36,13 +38,17 @@ public:
 
     void EndFrame();
 
-protected:
+public:
     void AddToViewport(Widget* widget, int zOrder = 0);
     void AddToPlayerViewport(Widget* widget, PlayerController* player, int zOrder = 0);
+    void RemoveFromViewport(Widget* widget);
+    // I certainly need an reflect system to remove the widget by class
+    void RemoveFromViewport(std::string widgetName);
 
 private:
-    WidgetSystemConfig                     m_config;
-    std::set<Widget*, DescendingZOrderPtr> m_widgets;
+    WidgetSystemConfig   m_config;
+    std::vector<Widget*> m_widgets;
+    //std::set<Widget*, DescendingZOrderPtr> m_widgets;
 
 private:
 };
