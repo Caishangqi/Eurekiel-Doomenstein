@@ -34,6 +34,7 @@ public:
     bool        m_canBePossessed = false;
     float       m_corpseLifetime = 0.0f;
     bool        m_visible        = false;
+    bool        m_dieOnSpawn     = false;
     /// Collision
     float      m_physicsRadius      = 0.0f;
     float      m_physicsHeight      = 0.0f;

@@ -65,6 +65,7 @@ ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
     m_canBePossessed                   = ParseXmlAttribute(actorDefElement, "canBePossessed", m_canBePossessed);
     m_corpseLifetime                   = ParseXmlAttribute(actorDefElement, "corpseLifetime", m_corpseLifetime);
     m_visible                          = ParseXmlAttribute(actorDefElement, "visible", m_visible);
+    m_dieOnSpawn                       = ParseXmlAttribute(actorDefElement, "dieOnSpawn", m_dieOnSpawn);
     const XmlElement* collisionElement = FindChildElementByName(actorDefElement, "Collision");
     if (collisionElement)
     {
@@ -107,7 +108,7 @@ ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
     if (visualsElement)
     {
         printf("                                    ‖ Loading Visuals Information\n");
-        m_cellCount     = ParseXmlAttribute(*visualsElement, "spriteSheetCellCount", m_cellCount);
+        m_cellCount     = ParseXmlAttribute(*visualsElement, "cellCount", m_cellCount);
         m_size          = ParseXmlAttribute(*visualsElement, "size", m_size);
         m_pivot         = ParseXmlAttribute(*visualsElement, "pivot", m_pivot);
         m_billboardType = ParseXmlAttribute(*visualsElement, "billboardType", m_billboardType);
