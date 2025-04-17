@@ -2,6 +2,7 @@
 #include "Controller.hpp"
 #include "../Entity.hpp"
 #include "Engine/Core/EngineCommon.hpp"
+#include "Game/GameCommon.hpp"
 
 class Actor;
 class Camera;
@@ -22,31 +23,35 @@ class PlayerController : public Controller
 {
 public:
     PlayerController(Map* map);
-    PlayerController(Map* map, Vec3 position, EulerAngles orientation = EulerAngles());
     ~PlayerController() override;
 
     void Possess(ActorHandle& actorHandle) override;
 
+    /// Update
     void Update(float deltaSeconds) override;
     void UpdateWeapon(float deltaSeconds);
+    void UpdateKeyboardInput(float deltaSeconds);
+    void UpdateControllerInput(float deltaSeconds);
     void UpdateInput(float deltaSeconds); // Perform input processing for controlling actors and free-fly camera mode.
     void UpdateCamera(float deltaSeconds); // Update our camera settings, taking in to account actor eye height and field of vision.
+
+    /// Render
     void Render() const;
 
     void HandleActorDead(float deltaSeconds);
 
-    Mat44 GetModelToWorldTransform() const;
+    /// Setter
+    DeviceType SetInputDeviceType(DeviceType newDeviceType);
+    DeviceType GetInputDeviceType() const;
+    Mat44      GetModelToWorldTransform() const;
 
 public:
-    Camera*     m_camera     = nullptr; // Our camera. Used as the world camera when rendering.
-    Camera*     m_viewCamera = nullptr; // Handle screen message and hud
-    Vec3        m_position; // 3D position, separate from our actor so that we have a transform for the free-fly camera, as a Vec3, in world units.
-    EulerAngles m_orientation; // 3D orientation, separate from our actor so that we have a transform for the free-fly camera, as EulerAngles, in degrees.
-    bool        m_bCameraMode = false; // Toggles whether we are controlling an actor or a free-fly camera currently.
-    AABB2       m_viewport; // viewport size
+    bool m_bCameraMode = false; // Toggles whether we are controlling an actor or a free-fly camera currently.
+
 private:
-    float m_speed    = 2.0f;
-    float m_turnRate = 0.075f;
+    float      m_speed      = 2.0f;
+    float      m_turnRate   = 0.075f;
+    DeviceType m_deviceType = DeviceType::KEYBOARD_AND_MOUSE;
 
     void HandleRayCast();
     void UpdateDebugMessage();
