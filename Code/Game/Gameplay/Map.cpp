@@ -22,6 +22,7 @@
 #include "Game/Definition/TileDefinition.hpp"
 #include "Engine/Renderer/Renderer.cpp"
 #include "Game/Framework/ActorHandle.hpp"
+#include "Game/Framework/WidgetSubsystem.hpp"
 
 Map::Map(Game* game, const MapDefinition* definition): m_game(game), m_definition(definition)
 {
@@ -46,7 +47,7 @@ Map::Map(Game* game, const MapDefinition* definition): m_game(game), m_definitio
     {
         SpawnActor(spawnInfo);
     }
-    
+
     for (PlayerController* controller : g_theGame->m_localPlayerControllers)
     {
         Actor* playerActor = SpawnPlayer(controller);
@@ -78,23 +79,23 @@ Map::~Map()
 void Map::CreateTiles()
 {
     printf("Map::Create       ‖ Creating Map tiles \n");
-    m_tiles.resize((int)m_definition->m_mapImage->GetDimensions().x * m_definition->m_mapImage->GetDimensions().y);
+    m_tiles.resize(m_definition->m_mapImage->GetDimensions().x * m_definition->m_mapImage->GetDimensions().y);
     for (int y = 0; y < m_definition->m_mapImage->GetDimensions().y; y++)
     {
         for (int x = 0; x < m_definition->m_mapImage->GetDimensions().x; x++)
         {
             Tile* tile = GetTile(x, y);
             tile->SetTileCoords(IntVec2(x, y));
-            tile->SetBounds(AABB3(Vec3((float)x, (float)y, 0.f), Vec3((float)(x + 1), (float)(y + 1), 1.f)));
+            tile->SetBounds(AABB3(Vec3(static_cast<float>(x), static_cast<float>(y), 0.f), Vec3(static_cast<float>(x + 1), static_cast<float>(y + 1), 1.f)));
             Rgba8           color      = m_definition->m_mapImage->GetTexelColor(IntVec2(x, y));
             TileDefinition* definition = TileDefinition::GetByTexelColor(color);
-            if (definition == NULL)
+            if (definition == nullptr)
                 printf("Map::Create       ‖ Tile definition not found for texel color (%d, %d)", x, y);
             tile->SetTileDefinition(definition);
             //printf("Map::Create       ‖ Add tile %s at (%d, %d)\n", definition->m_name.c_str(), x, y);
         }
     }
-    printf("Map::Create       ‖ Creating total tiles: %d\n", (int)m_tiles.size());
+    printf("Map::Create       ‖ Creating total tiles: %d\n", static_cast<int>(m_tiles.size()));
 }
 
 void Map::CreateGeometry()
@@ -153,9 +154,9 @@ void Map::AddGeometryForWall(std::vector<Vertex_PCUTBN>& vertexes, std::vector<u
 void Map::AddGeometryForFloor(std::vector<Vertex_PCUTBN>& vertexes, std::vector<unsigned int>& indices, const AABB3& bounds, const AABB2& UVs) const
 {
     Vec3 bottomLeft  = bounds.m_mins;
-    Vec3 bottomRight = Vec3(bounds.m_maxs.x, bounds.m_mins.y, bounds.m_mins.z);
-    Vec3 topRight    = Vec3(bounds.m_maxs.x, bounds.m_maxs.y, bounds.m_mins.z);
-    Vec3 topLeft     = Vec3(bounds.m_mins.x, bounds.m_maxs.y, bounds.m_mins.z);
+    auto bottomRight = Vec3(bounds.m_maxs.x, bounds.m_mins.y, bounds.m_mins.z);
+    auto topRight    = Vec3(bounds.m_maxs.x, bounds.m_maxs.y, bounds.m_mins.z);
+    auto topLeft     = Vec3(bounds.m_mins.x, bounds.m_maxs.y, bounds.m_mins.z);
     AddVertsForQuad3D(vertexes, indices, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, UVs);
 }
 
@@ -175,11 +176,11 @@ void Map::CreateBuffers()
     /// TODO: Consider refactory those steps
     m_vertexBuffer = g_theRenderer->CreateVertexBuffer(sizeof(Vertex_PCUTBN), sizeof(Vertex_PCUTBN));
     //m_vertexBuffer->Resize((int)m_vertexes.size() * sizeof(Vertex_PCUTBN));
-    g_theRenderer->CopyCPUToGPU(m_vertexes.data(), (int)m_vertexes.size() * sizeof(Vertex_PCUTBN), m_vertexBuffer);
+    g_theRenderer->CopyCPUToGPU(m_vertexes.data(), static_cast<int>(m_vertexes.size()) * sizeof(Vertex_PCUTBN), m_vertexBuffer);
     printf("Map::Create       ‖ Creating Index Buffers...\n");
     m_indexBuffer = g_theRenderer->CreateIndexBuffer(sizeof(unsigned int));
-    m_indexBuffer->Resize((int)m_indices.size() * sizeof(unsigned int));
-    g_theRenderer->CopyCPUToGPU(m_indices.data(), (int)m_indices.size() * sizeof(unsigned int), m_indexBuffer);
+    m_indexBuffer->Resize(static_cast<int>(m_indices.size()) * sizeof(unsigned int));
+    g_theRenderer->CopyCPUToGPU(m_indices.data(), static_cast<int>(m_indices.size()) * sizeof(unsigned int), m_indexBuffer);
 }
 
 bool Map::IsPositionInBounds(Vec3 position, const float tolerance) const
@@ -360,7 +361,7 @@ void Map::Render(PlayerController* toPlayer)
     g_theRenderer->BindShader(m_shader);
     g_theRenderer->BindTexture(m_texture);
     g_theRenderer->SetLightConstants(m_sunDirection, m_sunIntensity, m_ambientIntensity);
-    g_theRenderer->DrawIndexedVertexBuffer(m_vertexBuffer, m_indexBuffer, (int)m_indices.size());
+    g_theRenderer->DrawIndexedVertexBuffer(m_vertexBuffer, m_indexBuffer, static_cast<int>(m_indices.size()));
     g_theRenderer->BindShader(nullptr);
     for (Actor* actor : m_actors)
     {
@@ -542,8 +543,8 @@ RaycastResult3D Map::RaycastWorldZ(const Vec3& start, const Vec3& direction, flo
 
     if (direction.z > 0.0f)
     {
-        const float floorZ = 1.0f;
-        float       t      = (floorZ - start.z) / direction.z;
+        constexpr float floorZ = 1.0f;
+        float           t      = (floorZ - start.z) / direction.z;
         if (t >= 0.0f && t <= maxDistance)
         {
             result.m_didImpact    = true;
@@ -554,8 +555,8 @@ RaycastResult3D Map::RaycastWorldZ(const Vec3& start, const Vec3& direction, flo
     }
     else
     {
-        const float ceilingZ = 0.0f;
-        float       t        = (ceilingZ - start.z) / direction.z;
+        constexpr float ceilingZ = 0.0f;
+        float           t        = (ceilingZ - start.z) / direction.z;
         if (t >= 0.0f && t <= maxDistance)
         {
             result.m_didImpact    = true;
@@ -731,11 +732,11 @@ Actor* Map::AddActorsToMap(Actor* actor)
 Actor* Map::SpawnActor(const SpawnInfo& spawnInfo)
 {
     unsigned int newIndex = 0;
-    newIndex              = (unsigned int)m_actors.size();
+    newIndex              = static_cast<unsigned int>(m_actors.size());
     m_actors.push_back(nullptr);
     ++m_nextActorUID;
     ActorHandle handle(m_nextActorUID, newIndex);
-    Actor*      actor  = new Actor(spawnInfo);
+    auto        actor  = new Actor(spawnInfo);
     actor->m_handle    = handle;
     actor->m_map       = this;
     m_actors[newIndex] = actor;
@@ -749,7 +750,7 @@ Actor* Map::SpawnPlayer(PlayerController* playerController)
     spawnInfo.m_actorName = "Marine";
     std::vector<Actor*> spawnPoints;
     GetActorsByName(spawnPoints, "SpawnPoint");
-    int randomIndex = g_rng->RollRandomIntInRange(0, (int)spawnPoints.size() - 1);
+    int    randomIndex   = g_rng->RollRandomIntInRange(0, static_cast<int>(spawnPoints.size()) - playerController->m_index); // Random player spawn
     Actor* spawnPoint    = spawnPoints[randomIndex];
     spawnInfo.m_position = spawnPoint->m_position;
     //spawnPoint->m_orientation.m_yawDegrees = -90;
@@ -767,6 +768,7 @@ void Map::CheckAndRespawnPlayer()
         if (!controller->GetActor())
         {
             Actor* playerActor = SpawnPlayer(controller);
+            g_theWidgetSubsystem->RemoveFromPlayerViewport(controller, "WidgetPlayerDeath");
             printf("Map::CheckAndRespawnPlayer      Player spawned at: (%f, %f, %f)\n", playerActor->m_position.x, playerActor->m_position.y, playerActor->m_position.z);
             controller->Possess(playerActor->m_handle);
         }
@@ -832,8 +834,8 @@ Actor* Map::GetClosestVisibleEnemy(Actor* instigator)
         }
 
         // Check distance
-        Vec2 actorPos2D      = Vec2(actor->m_position.x, actor->m_position.y);
-        Vec2 instigatorPos2D = Vec2(instigator->m_position.x, instigator->m_position.y);
+        auto actorPos2D      = Vec2(actor->m_position.x, actor->m_position.y);
+        auto instigatorPos2D = Vec2(instigator->m_position.x, instigator->m_position.y);
 
         float distanceSq = GetDistanceSquared2D(actorPos2D, instigatorPos2D);
         float radiusSq   = instigator->m_definition->m_sightRadius * instigator->m_definition->m_sightRadius;
@@ -921,7 +923,7 @@ Actor* Map::DebugPossessNext()
     unsigned int index = playerControlledActor->m_handle.GetIndex();
     for (unsigned int i = index + 1; i <= m_actors.size() + index; i++)
     {
-        unsigned int desiredIndex = i % (int)m_actors.size();
+        unsigned int desiredIndex = i % static_cast<int>(m_actors.size());
 
         if (m_actors[desiredIndex] && m_actors[desiredIndex]->m_handle.IsValid() && m_actors[desiredIndex]->m_definition->m_canBePossessed)
         {

@@ -11,18 +11,17 @@ class Shader;
 class Hud
 {
 public:
-    Hud(XmlElement const& hudElement);
+    Hud(const XmlElement& hudElement);
     ~Hud();
-    Animation* GetAnimationByName(std::string const& animationName);
+    Animation*              GetAnimationByName(const std::string& animationName);
     std::vector<Animation>& GetAnimations();
-public:
-    std::string m_name           = "Default";
-    Shader*     m_shader         = nullptr;
-    Texture*    m_baseTexture    = nullptr;
-    Texture*    m_reticleTexture = nullptr;
-    IntVec2     m_reticleSize;
-    IntVec2     m_spriteSize;
-    Vec2        m_spritePivot;
+    std::string             m_name           = "Default";
+    Shader*                 m_shader         = nullptr;
+    Texture*                m_baseTexture    = nullptr;
+    Texture*                m_reticleTexture = nullptr;
+    IntVec2                 m_reticleSize;
+    IntVec2                 m_spriteSize;
+    Vec2                    m_spritePivot;
 
 private:
     std::string            m_shaderName           = "Default";

@@ -18,10 +18,8 @@ public:
     static TileDefinition*             GetByName(const std::string& name);
     static TileDefinition*             GetByTexelColor(const Rgba8& color);
 
-public:
-    TileDefinition(XmlElement const& tileDefElement);
+    TileDefinition(const XmlElement& tileDefElement);
 
-public:
     std::string m_name    = "Unknown";
     bool        m_isSolid = false;
 

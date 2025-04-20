@@ -3,7 +3,7 @@
 #include "Engine/Math/MathUtils.hpp"
 
 
-AnimationGroup::AnimationGroup(XmlElement const& animationGroupElement, const SpriteSheet& spriteSheet): m_spriteSheet(spriteSheet)
+AnimationGroup::AnimationGroup(const XmlElement& animationGroupElement, const SpriteSheet& spriteSheet): m_spriteSheet(spriteSheet)
 {
     printf("AnimationGroup::AnimationGroup    %s", "Start Loading AnimationGroup\n");
     //                                 ‖ 
@@ -26,22 +26,23 @@ AnimationGroup::AnimationGroup(XmlElement const& animationGroupElement, const Sp
     }
     if (animationGroupElement.ChildElementCount() > 0)
     {
-        XmlElement const* element = animationGroupElement.FirstChildElement();
+        const XmlElement* element = animationGroupElement.FirstChildElement();
         while (element != nullptr)
         {
-            Vec3                 directionVector  = ParseXmlAttribute(*element, "vector", Vec3::ZERO);
-            XmlElement const*    animationElement = element->FirstChildElement();
-            int                  startFrame       = ParseXmlAttribute(*animationElement, "startFrame", 0);
-            int                  endFrame         = ParseXmlAttribute(*animationElement, "endFrame", 0);
-            SpriteAnimDefinition animation        = SpriteAnimDefinition(spriteSheet, startFrame, endFrame, 1.0f / m_secondsPerFrame, m_playbackType);
+            Vec3              directionVector  = ParseXmlAttribute(*element, "vector", Vec3::ZERO);
+            const XmlElement* animationElement = element->FirstChildElement();
+            int               startFrame       = ParseXmlAttribute(*animationElement, "startFrame", 0);
+            int               endFrame         = ParseXmlAttribute(*animationElement, "endFrame", 0);
+            auto              animation        = SpriteAnimDefinition(spriteSheet, startFrame, endFrame, 1.0f / m_secondsPerFrame, m_playbackType);
             m_animations.insert(std::make_pair(directionVector.GetNormalized(), animation)); // Be-careful that 
             element = element->NextSiblingElement();
-            printf("                                 ‖ Add Direction (%d, %d, %d) to Animation Group\n", (int)directionVector.x, (int)directionVector.y, (int)directionVector.z);
+            printf("                                 ‖ Add Direction (%d, %d, %d) to Animation Group\n", static_cast<int>(directionVector.x), static_cast<int>(directionVector.y),
+                   static_cast<int>(directionVector.z));
         }
     }
 }
 
-SpriteAnimDefinition const& AnimationGroup::GetSpriteAnimation(Vec3 direction)
+const SpriteAnimDefinition& AnimationGroup::GetSpriteAnimation(Vec3 direction)
 {
     Vec3  leastOffset     = direction;
     float directionScalar = -FLT_MAX;

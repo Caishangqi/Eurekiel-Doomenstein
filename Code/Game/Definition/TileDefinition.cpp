@@ -15,11 +15,11 @@ void TileDefinition::LoadDefinitions(const char* path)
         if (rootElement)
         {
             printf("TileDefinition::LoadDefinitions    TileDefinitions from \"%s\" was loaded\n", path);
-            XmlElement const* element = rootElement->FirstChildElement();
+            const XmlElement* element = rootElement->FirstChildElement();
             while (element != nullptr)
             {
-                TileDefinition tileDef = TileDefinition(*element);
-                TileDefinition::s_definitions.push_back(tileDef);
+                auto tileDef = TileDefinition(*element);
+                s_definitions.push_back(tileDef);
                 element = element->NextSiblingElement();
             }
         }
@@ -40,7 +40,7 @@ void TileDefinition::ClearDefinitions()
 
 TileDefinition* TileDefinition::GetByName(const std::string& name)
 {
-    for (int i = 0; i < (int)s_definitions.size(); i++)
+    for (int i = 0; i < static_cast<int>(s_definitions.size()); i++)
     {
         if (s_definitions[i].m_name == name)
         {
@@ -52,7 +52,7 @@ TileDefinition* TileDefinition::GetByName(const std::string& name)
 
 TileDefinition* TileDefinition::GetByTexelColor(const Rgba8& color)
 {
-    for (int i = 0; i < (int)s_definitions.size(); i++)
+    for (int i = 0; i < static_cast<int>(s_definitions.size()); i++)
     {
         Rgba8 defColor = s_definitions[i].m_mapImagePixelColor;
         if (defColor.r == color.r && defColor.g == color.g && defColor.b == color.b)
@@ -63,7 +63,7 @@ TileDefinition* TileDefinition::GetByTexelColor(const Rgba8& color)
     return nullptr;
 }
 
-TileDefinition::TileDefinition(XmlElement const& tileDefElement)
+TileDefinition::TileDefinition(const XmlElement& tileDefElement)
 {
     m_name                = ParseXmlAttribute(tileDefElement, "name", m_name);
     m_isSolid             = ParseXmlAttribute(tileDefElement, "isSolid", m_isSolid);

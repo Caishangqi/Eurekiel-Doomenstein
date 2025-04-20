@@ -11,13 +11,11 @@ public:
     static std::vector<WeaponDefinition> s_definitions;
     static void                          LoadDefinitions(const char* path);
     static void                          ClearDefinitions();
-    static const WeaponDefinition*       GetByName(const std::string& name);
+    static WeaponDefinition*             GetByName(const std::string& name);
 
-public:
-    WeaponDefinition(XmlElement const& mapDefElement);
-    Sound* GetSoundByName(std::string const& soundName);
+    WeaponDefinition(const XmlElement& mapDefElement);
+    Sound* GetSoundByName(std::string soundName);
 
-public:
     // Definition name of the weapon to add to this actor when it is spawned.
     std::string m_name = "Default";
     // The time that must elapse between firing, in seconds.

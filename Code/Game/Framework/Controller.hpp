@@ -14,7 +14,6 @@ public:
     Controller(Map* map);
     virtual ~Controller();
 
-public:
     ActorHandle  m_actorHandle; // Handle of our currently possessed actor or INVALID if no actor is possessed.
     Map*         m_map   = nullptr; // Reference to the current map for purposes of dereferencing actor handles.
     int          m_index = -1;
@@ -34,7 +33,6 @@ public:
     /// Getter
     int GetControllerIndex();
 
-public:
     Camera* m_viewCamera = nullptr; // Handle screen message and hud
     AABB2   m_screenViewport;
     AABB2   m_viewport; // viewport size

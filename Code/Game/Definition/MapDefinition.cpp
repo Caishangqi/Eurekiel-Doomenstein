@@ -20,11 +20,11 @@ void MapDefinition::LoadDefinitions(const char* path)
         if (rootElement)
         {
             printf("MapDefinition::LoadDefinitions    MapDefinitions from \"%s\" was loaded\n", path);
-            XmlElement const* element = rootElement->FirstChildElement();
+            const XmlElement* element = rootElement->FirstChildElement();
             while (element != nullptr)
             {
-                MapDefinition mapDef = MapDefinition(*element);
-                MapDefinition::s_definitions.push_back(mapDef);
+                auto mapDef = MapDefinition(*element);
+                s_definitions.push_back(mapDef);
                 element = element->NextSiblingElement();
             }
         }
@@ -51,7 +51,7 @@ void MapDefinition::ClearDefinitions()
 
 const MapDefinition* MapDefinition::GetByName(const std::string& name)
 {
-    for (int i = 0; i < (int)s_definitions.size(); i++)
+    for (int i = 0; i < static_cast<int>(s_definitions.size()); i++)
     {
         if (s_definitions[i].m_name == name)
         {
@@ -61,7 +61,7 @@ const MapDefinition* MapDefinition::GetByName(const std::string& name)
     return nullptr;
 }
 
-MapDefinition::MapDefinition(XmlElement const& mapDefElement)
+MapDefinition::MapDefinition(const XmlElement& mapDefElement)
 {
     m_name                 = ParseXmlAttribute(mapDefElement, "name", m_name);
     m_mapImage             = g_theRenderer->CreateImageFromFile(ParseXmlAttribute(mapDefElement, "image", m_name).c_str());

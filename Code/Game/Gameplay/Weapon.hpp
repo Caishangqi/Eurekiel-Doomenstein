@@ -15,13 +15,12 @@ class Weapon
 
 public:
     Weapon() = delete;
-    Weapon(const WeaponDefinition* definition, Actor* owner);
+    Weapon(WeaponDefinition* definition, Actor* owner);
     ~Weapon();
 
-public:
     /// Checks if the weapon is ready to fire. If so, fires each of the ray casts, projectiles,
-    /// and melee attacks defined in the definition. Needs to pass along its owning actor to be
-    /// ignored in all raycast and collision checks.
+        /// and melee attacks defined in the definition. Needs to pass along its owning actor to be
+        /// ignored in all raycast and collision checks.
     void Fire();
     /// This, and other utility methods, will be helpful for randomizing weapons with a cone.
     /// @param weaponOrientation 
@@ -46,9 +45,9 @@ public:
     void RenderWeaponAnim() const;
 
 protected:
-    Actor*                  m_owner        = nullptr;
-    const WeaponDefinition* m_definition   = nullptr;
-    float                   m_lastFireTime = 0.f;
+    Actor*            m_owner        = nullptr;
+    WeaponDefinition* m_definition   = nullptr;
+    float             m_lastFireTime = 0.f;
 
     AABB2 m_hudBaseBound; // we calculate the bound that Seamlessly connect the weapon texture
 

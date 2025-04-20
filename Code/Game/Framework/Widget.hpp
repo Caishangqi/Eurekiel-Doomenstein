@@ -9,7 +9,6 @@ public:
     Widget();
     virtual ~Widget();
 
-public:
     virtual void BeginFrame();
     virtual void Render();
     virtual void Draw() const;
@@ -21,7 +20,6 @@ public:
     virtual int               GetZOrder() const;
     virtual std::string       GetName() const;
 
-public:
     virtual void AddToViewport(int zOrder = 0);
     virtual void AddToPlayerViewport(PlayerController* player, int zOrder = 0);
     virtual void RemoveFromViewport();

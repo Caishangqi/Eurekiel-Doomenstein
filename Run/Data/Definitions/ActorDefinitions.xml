@@ -48,7 +48,7 @@
     <Inventory>
       <Weapon name="Pistol" />
       <Weapon name="PlasmaRifle" />
-      <Weapon name="DemonMelee" />
+     <!-- <Weapon name="DemonMelee" />-->
     </Inventory>
   </ActorDefinition>
   <!-- Demon -->

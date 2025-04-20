@@ -5,7 +5,7 @@
 #include "Engine/Renderer/Texture.hpp"
 #include "Game/GameCommon.hpp"
 
-Hud::Hud(XmlElement const& hudElement)
+Hud::Hud(const XmlElement& hudElement)
 {
     m_shaderName           = ParseXmlAttribute(hudElement, "shader", m_shaderName);
     m_shader               = g_theRenderer->CreateShaderFromFile(m_shaderName.c_str(), VertexType::Vertex_PCU);
@@ -20,10 +20,10 @@ Hud::Hud(XmlElement const& hudElement)
 
     if (hudElement.ChildElementCount() > 0)
     {
-        XmlElement const* element = hudElement.FirstChildElement();
+        const XmlElement* element = hudElement.FirstChildElement();
         while (element != nullptr)
         {
-            Animation animation = Animation(*element);
+            auto animation = Animation(*element);
             m_animations.push_back(animation);
             element = element->NextSiblingElement();
         }
@@ -36,7 +36,7 @@ Hud::~Hud()
     POINTER_SAFE_DELETE(m_shader)
 }
 
-Animation* Hud::GetAnimationByName(std::string const& animationName)
+Animation* Hud::GetAnimationByName(const std::string& animationName)
 {
     for (Animation& animation : m_animations)
     {

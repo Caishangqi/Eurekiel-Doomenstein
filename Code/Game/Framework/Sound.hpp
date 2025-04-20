@@ -11,9 +11,9 @@
 class Sound
 {
 public:
-    Sound(XmlElement const& soundElement);
+    Sound(const XmlElement& soundElement);
 
-public:
+    SoundID     GetSoundID() const;
     std::string m_name     = "Default";
     std::string m_filePath = "";
     SoundID     m_id;

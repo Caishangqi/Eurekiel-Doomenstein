@@ -12,11 +12,11 @@ void WeaponDefinition::LoadDefinitions(const char* path)
         if (rootElement)
         {
             printf("WeaponDefinition::LoadDefinitions    WeaponDefinition from \"%s\" was loaded\n", path);
-            XmlElement const* element = rootElement->FirstChildElement();
+            const XmlElement* element = rootElement->FirstChildElement();
             while (element != nullptr)
             {
-                WeaponDefinition mapDef = WeaponDefinition(*element);
-                WeaponDefinition::s_definitions.push_back(mapDef);
+                auto mapDef = WeaponDefinition(*element);
+                s_definitions.push_back(mapDef);
                 element = element->NextSiblingElement();
             }
         }
@@ -36,9 +36,9 @@ void WeaponDefinition::ClearDefinitions()
     s_definitions.clear();
 }
 
-const WeaponDefinition* WeaponDefinition::GetByName(const std::string& name)
+WeaponDefinition* WeaponDefinition::GetByName(const std::string& name)
 {
-    for (int i = 0; i < (int)s_definitions.size(); i++)
+    for (int i = 0; i < static_cast<int>(s_definitions.size()); i++)
     {
         if (s_definitions[i].m_name == name)
         {
@@ -48,7 +48,7 @@ const WeaponDefinition* WeaponDefinition::GetByName(const std::string& name)
     return nullptr;
 }
 
-WeaponDefinition::WeaponDefinition(XmlElement const& weaponDefElement)
+WeaponDefinition::WeaponDefinition(const XmlElement& weaponDefElement)
 {
     m_name                       = ParseXmlAttribute(weaponDefElement, "name", m_name);
     m_refireTime                 = ParseXmlAttribute(weaponDefElement, "refireTime", m_refireTime);
@@ -72,16 +72,16 @@ WeaponDefinition::WeaponDefinition(XmlElement const& weaponDefElement)
         printf("                                    ‖ Loading Hud Information\n");
         m_hud = new Hud(*hudElement);
     }
-    const XmlElement* soundElement = FindChildElementByName(weaponDefElement, "HUD");
+    const XmlElement* soundElement = FindChildElementByName(weaponDefElement, "Sounds");
     if (soundElement)
     {
         printf("                                    ‖ Loading Sound Information\n");
         if (soundElement->ChildElementCount() > 0)
         {
-            XmlElement const* element = soundElement->FirstChildElement();
+            const XmlElement* element = soundElement->FirstChildElement();
             while (element != nullptr)
             {
-                Sound sound = Sound(*element);
+                auto sound = Sound(*element);
                 m_sounds.push_back(sound);
                 element = element->NextSiblingElement();
             }
@@ -91,7 +91,7 @@ WeaponDefinition::WeaponDefinition(XmlElement const& weaponDefElement)
     printf("WeaponDefinition::WeaponDefinition    — Create Definition \"%s\" \n", m_name.c_str());
 }
 
-Sound* WeaponDefinition::GetSoundByName(std::string const& soundName)
+Sound* WeaponDefinition::GetSoundByName(const std::string soundName)
 {
     for (Sound& sound : m_sounds)
     {

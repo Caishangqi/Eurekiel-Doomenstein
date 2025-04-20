@@ -9,10 +9,10 @@
 class AnimationGroup
 {
 public:
-    AnimationGroup(XmlElement const& animationGroupElement, const SpriteSheet& spriteSheet);
+    AnimationGroup(const XmlElement& animationGroupElement, const SpriteSheet& spriteSheet);
 
     /// Getter
-    SpriteAnimDefinition const& GetSpriteAnimation(Vec3 direction);
+    const SpriteAnimDefinition& GetSpriteAnimation(Vec3 direction);
     float                       GetAnimationLength();
     int                         GetAnimationTotalFrame();
 

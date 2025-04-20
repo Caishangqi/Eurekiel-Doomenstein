@@ -3,7 +3,6 @@
 
 struct ActorHandle
 {
-public:
     ActorHandle();
     ActorHandle(unsigned int data);
     ActorHandle(std::string data);

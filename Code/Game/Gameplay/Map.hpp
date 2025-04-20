@@ -41,7 +41,7 @@ public:
     void AddGeometryForCeiling(std::vector<Vertex_PCUTBN>& vertexes, std::vector<unsigned int>& indices, const AABB3& bounds, const AABB2& UVs) const;
     void CreateBuffers();
 
-    bool    IsPositionInBounds(Vec3 position, const float tolerance = 0.f) const;
+    bool    IsPositionInBounds(Vec3 position, float tolerance = 0.f) const;
     IntVec2 GetTileCoordsForWorldPos(const Vec2& worldCoords);
     IntVec2 GetTileCoordsForWorldPos(const Vec3& worldCoords);
     bool    AreCoordsInBounds(int x, int y) const;
@@ -60,7 +60,7 @@ public:
     void ColliedActorWithMap(Actor* actor);
     void PushActorOutOfTile(Actor* actor, const IntVec2& tileCoords);
 
-    void              Render(PlayerController * toPlayer);
+    void              Render(PlayerController* toPlayer);
     LightingConstants GetLightConstants();
     /// Raycast
     RaycastResult3D RaycastAll(const Vec3& start, const Vec3& direction, float distance);
@@ -86,7 +86,7 @@ public:
     Actor* SpawnActor(const SpawnInfo& spawnInfo);
     Actor* SpawnPlayer(PlayerController* playerController); // Spawn a marine actor at a random spawn point and possess it with the player.
     void   CheckAndRespawnPlayer();
-    Actor* GetActorByHandle(const ActorHandle handle) const;
+    Actor* GetActorByHandle(ActorHandle handle) const;
     Actor* GetActorByName(const std::string& name) const;
     Actor* GetClosestVisibleEnemy(Actor* instigator); //Search the actor list to find actors meeting the provided criteria.
     void   GetActorsByName(std::vector<Actor*>& inActors, const std::string& name) const;
@@ -103,9 +103,9 @@ protected:
     IntVec2              m_dimensions;
 
     /// Actors
-    std::vector<Actor*>       m_actors;
-    static const unsigned int MAX_ACTOR_UID  = 0x0000fffeu;
-    unsigned int              m_nextActorUID = 3568;
+    std::vector<Actor*>           m_actors;
+    static constexpr unsigned int MAX_ACTOR_UID  = 0x0000fffeu;
+    unsigned int                  m_nextActorUID = 3568;
     /// 
 
     /// Lighting

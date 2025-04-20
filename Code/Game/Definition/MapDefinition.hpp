@@ -18,7 +18,6 @@ class Image;
 /// that spawning actors in general.
 struct SpawnInfo
 {
-public:
     SpawnInfo() = default;
 
     SpawnInfo(std::string actorName, std::string faction, Vec3 position, Vec3 orientation, Vec3 velocity) : m_actorName(actorName), m_faction(faction), m_position(position),
@@ -26,7 +25,6 @@ public:
     {
     }
 
-public:
     std::string m_actorName = "Default";
     std::string m_faction   = "NEUTRAL";
     Vec3        m_position;
@@ -42,10 +40,8 @@ public:
     static void                       ClearDefinitions();
     static const MapDefinition*       GetByName(const std::string& name);
 
-public:
-    MapDefinition(XmlElement const& mapDefElement);
+    MapDefinition(const XmlElement& mapDefElement);
 
-public:
     std::string            m_name                 = "Default";
     Image*                 m_mapImage             = nullptr;
     SpriteSheet*           m_spriteSheet          = nullptr;

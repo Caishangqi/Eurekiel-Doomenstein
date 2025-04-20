@@ -6,7 +6,7 @@ Tile::~Tile()
 {
 }
 
-Tile::Tile(IntVec2 tileCoords, TileDefinition* tileDefinition): m_tileCoords(tileCoords), m_definition(tileDefinition)
+Tile::Tile(IntVec2 tileCoords, TileDefinition* tileDefinition): m_definition(tileDefinition), m_tileCoords(tileCoords)
 {
 }
 
