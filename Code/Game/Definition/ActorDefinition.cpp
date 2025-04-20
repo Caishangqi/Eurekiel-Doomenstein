@@ -18,11 +18,11 @@ void ActorDefinition::LoadDefinitions(const char* path)
         if (rootElement)
         {
             printf("ActorDefinition::LoadDefinitions    ActorDefinitions from \"%s\" was loaded\n", path);
-            XmlElement const* element = rootElement->FirstChildElement();
+            const XmlElement* element = rootElement->FirstChildElement();
             while (element != nullptr)
             {
-                ActorDefinition mapDef = ActorDefinition(*element);
-                ActorDefinition::s_definitions.push_back(mapDef);
+                auto mapDef = ActorDefinition(*element);
+                s_definitions.push_back(mapDef);
                 element = element->NextSiblingElement();
             }
         }
@@ -47,7 +47,7 @@ void ActorDefinition::ClearDefinitions()
 
 ActorDefinition* ActorDefinition::GetByName(const std::string& name)
 {
-    for (int i = 0; i < (int)s_definitions.size(); i++)
+    for (int i = 0; i < static_cast<int>(s_definitions.size()); i++)
     {
         if (s_definitions[i].m_name == name)
         {
@@ -57,7 +57,7 @@ ActorDefinition* ActorDefinition::GetByName(const std::string& name)
     return nullptr;
 }
 
-ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
+ActorDefinition::ActorDefinition(const XmlElement& actorDefElement)
 {
     m_name                             = ParseXmlAttribute(actorDefElement, "name", m_name);
     m_faction                          = ParseXmlAttribute(actorDefElement, "faction", m_faction);
@@ -119,10 +119,10 @@ ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
         if (visualsElement->ChildElementCount() > 0)
         {
             /// Handle Animation
-            XmlElement const* element = visualsElement->FirstChildElement();
+            const XmlElement* element = visualsElement->FirstChildElement();
             while (element != nullptr)
             {
-                AnimationGroup animation_group = AnimationGroup(*element, *m_spriteSheet);
+                auto animation_group = AnimationGroup(*element, *m_spriteSheet);
                 m_animationGroups.push_back(animation_group);
                 printf("                                 — Add AnimationGroup: %s\n", animation_group.m_name.c_str());
                 element = element->NextSiblingElement();
@@ -134,10 +134,10 @@ ActorDefinition::ActorDefinition(XmlElement const& actorDefElement)
     if (soundsElement)
     {
         printf("                                    ‖ Loading Sound Information\n");
-        XmlElement const* element = soundsElement->FirstChildElement();
+        const XmlElement* element = soundsElement->FirstChildElement();
         while (element != nullptr)
         {
-            Sound sound = Sound(*element);
+            auto sound = Sound(*element);
             m_sounds.push_back(sound);
             printf("ActorDefinition::ActorDefinition    — Add Sound: %s From: %s\n", sound.m_name.c_str(), sound.m_filePath.c_str());
             element = element->NextSiblingElement();
@@ -169,7 +169,7 @@ AnimationGroup* ActorDefinition::GetAnimationGroupByName(std::string& name)
     return nullptr;
 }
 
-Sound* ActorDefinition::GetSoundByName(std::string& name)
+Sound* ActorDefinition::GetSoundByName(std::string name)
 {
     for (Sound& sound : m_sounds)
     {

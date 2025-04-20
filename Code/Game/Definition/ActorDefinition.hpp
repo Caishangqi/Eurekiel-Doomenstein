@@ -21,12 +21,10 @@ public:
     static void                         ClearDefinitions();
     static ActorDefinition*             GetByName(const std::string& name);
 
-public:
-    ActorDefinition(XmlElement const& actorDefElement);
+    ActorDefinition(const XmlElement& actorDefElement);
     AnimationGroup* GetAnimationGroupByName(std::string& name);
-    Sound*          GetSoundByName(std::string& name);
+    Sound*          GetSoundByName(std::string name);
 
-public:
     /// Base
     std::string m_name           = "Default";
     std::string m_faction        = "NEUTRAL";
