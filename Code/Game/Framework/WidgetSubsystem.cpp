@@ -26,11 +26,16 @@ WidgetSubsystem::WidgetSubsystem(WidgetSystemConfig config): m_config(config)
 
 WidgetSubsystem::~WidgetSubsystem()
 {
+    for (Widget* widget : m_widgets)
+    {
+        delete widget;
+        widget = nullptr;
+    }
 }
 
 void WidgetSubsystem::BeginFrame()
 {
-    for (int i = 0; i < (int)m_widgets.size(); ++i)
+    for (int i = 0; i < static_cast<int>(m_widgets.size()); ++i)
     {
         if (m_widgets[i] && m_widgets[i]->m_bIsGarbage)
         {
@@ -48,7 +53,7 @@ void WidgetSubsystem::BeginFrame()
 
 void WidgetSubsystem::Startup()
 {
-    printf("WidgetSubsystem::Startup    Initialize widget subsystem\n");
+    printf("WidgetSubsystem::Startup    Initialize Widget Subsystem\n");
 }
 
 void WidgetSubsystem::Shutdown()
@@ -123,6 +128,18 @@ void WidgetSubsystem::RemoveFromViewport(std::string widgetName)
         if (widget && widget->m_name == widgetName)
         {
             printf("WidgetSubsystem::RemoveFromViewport        Remove widget %s\n", widget->GetName().c_str());
+            widget->RemoveFromViewport();
+        }
+    }
+}
+
+void WidgetSubsystem::RemoveFromPlayerViewport(PlayerController* player, std::string widgetName)
+{
+    for (Widget* widget : m_widgets)
+    {
+        if (widget && widget->m_name == widgetName && widget->m_owner == player)
+        {
+            printf("WidgetSubsystem::RemoveFromViewport        Remove player %d 's widget %s\n", player->m_index, widget->GetName().c_str());
             widget->RemoveFromViewport();
         }
     }

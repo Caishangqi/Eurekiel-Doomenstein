@@ -38,17 +38,15 @@ public:
 
     void EndFrame();
 
-public:
     void AddToViewport(Widget* widget, int zOrder = 0);
     void AddToPlayerViewport(Widget* widget, PlayerController* player, int zOrder = 0);
     void RemoveFromViewport(Widget* widget);
     // I certainly need an reflect system to remove the widget by class
     void RemoveFromViewport(std::string widgetName);
+    void RemoveFromPlayerViewport(PlayerController* player, std::string widgetName);
 
 private:
     WidgetSystemConfig   m_config;
     std::vector<Widget*> m_widgets;
     //std::set<Widget*, DescendingZOrderPtr> m_widgets;
-
-private:
 };
