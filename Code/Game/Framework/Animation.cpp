@@ -5,7 +5,7 @@
 #include "Engine/Renderer/SpriteSheet.hpp"
 #include "Game/GameCommon.hpp"
 
-Animation::Animation(XmlElement const& animationElement)
+Animation::Animation(const XmlElement& animationElement)
 {
     m_name            = ParseXmlAttribute(animationElement, "name", m_name);
     m_cellCount       = ParseXmlAttribute(animationElement, "cellCount", m_cellCount);

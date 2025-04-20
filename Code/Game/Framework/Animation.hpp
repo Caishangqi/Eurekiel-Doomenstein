@@ -10,13 +10,12 @@ class SpriteSheet;
 class Animation
 {
 public:
-    Animation(XmlElement const& animationElement);
+    Animation(const XmlElement& animationElement);
     ~Animation();
     float GetAnimationLength();
 
     const SpriteAnimDefinition* GetAnimationDefinition();
 
-public:
     std::string m_name;
 
 private:
