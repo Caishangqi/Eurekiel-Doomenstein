@@ -7,6 +7,8 @@
 #include "Game/App.hpp"
 #include "Game/Game.hpp"
 #include "Game/GameCommon.hpp"
+#include "Game/Framework/ResourceSubsystem.hpp"
+#include "Game/Framework/Sound.hpp"
 #include "Game/Framework/WidgetSubsystem.hpp"
 
 WidgetAttract::WidgetAttract()
@@ -14,6 +16,9 @@ WidgetAttract::WidgetAttract()
     m_name = "WidgetAttract";
     g_theEventSystem->SubscribeEventCallbackFunction("GameStateChangeEvent", OnStateChange);
     m_lowerInfoStringVertex.reserve(1024);
+    SoundID         mainMenuSoundID    = g_theAudio->CreateOrGetSound(g_gameConfigBlackboard.GetValue("mainMenuMusic", ""));
+    SoundPlaybackID mainMenuPlaybackID = g_theAudio->StartSound(mainMenuSoundID, true, 0.5f);
+    g_theResourceSubsystem->CachedSoundPlaybackID(mainMenuPlaybackID, mainMenuSoundID);
 }
 
 WidgetAttract::~WidgetAttract()
@@ -77,7 +82,7 @@ void WidgetAttract::UpdateKeyInput()
 
     if (spaceBarPressed || startButtonPressed)
     {
-        WidgetLobby* lobbyWidget = new WidgetLobby();
+        auto lobbyWidget = new WidgetLobby();
 
         if (spaceBarPressed)
         {
@@ -91,6 +96,7 @@ void WidgetAttract::UpdateKeyInput()
             g_theWidgetSubsystem->AddToViewport(lobbyWidget);
             RemoveFromViewport();
         }
+        PLAY_SOUND_CLICK("buttonClickSound");
     }
 }
 

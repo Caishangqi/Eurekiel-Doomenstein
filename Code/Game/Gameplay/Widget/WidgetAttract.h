@@ -7,7 +7,6 @@ public:
     WidgetAttract();
     ~WidgetAttract() override;
 
-public:
     void Draw() const override;
     void Update() override;
 
