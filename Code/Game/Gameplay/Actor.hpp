@@ -10,6 +10,7 @@
 #include "Engine/Core/EngineCommon.hpp"
 #include "Engine/Math/ZCylinder.hpp"
 #include "Game/Framework/ActorHandle.hpp"
+#include "Game/Framework/Sound.hpp"
 
 
 class AnimationGroup;
@@ -32,7 +33,7 @@ public:
     Actor(const Vec3& position, const EulerAngles& orientation, const Rgba8& color, float physicalHeight = 2.0f, float physicalRadius = 1.0f, bool bIsStatic = false);
     virtual ~Actor();
 
-public:
+
     Vec3        m_position; // 3D position, as a Vec3, in world units.
     EulerAngles m_orientation; // 3D orientation, as EulerAngles, in degrees.
     Vec3        m_velocity; // 3D velocity, as a Vec3, in world units per second.
@@ -74,6 +75,8 @@ private:
     AnimationGroup* m_currentPlayingAnimationGroup  = nullptr;
     Timer*          m_animationTimer                = nullptr;
     float           m_animationTimerSpeedMultiplier = 1.f;
+
+    std::map<SoundID, SoundPlaybackID> m_soundPlaybackIDs;
 
 public:
     /// After we inject the map pointer and other handle etc, we perform post initialize

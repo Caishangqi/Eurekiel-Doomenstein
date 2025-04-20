@@ -18,8 +18,11 @@
 #include "Game/Definition/WeaponDefinition.hpp"
 #include "Game/Framework/AIController.hpp"
 #include "Game/Framework/PlayerController.hpp"
+#include "Game/Framework/WidgetSubsystem.hpp"
+#include "Save/PlayerSaveSubsystem.hpp"
+#include "Widget/WidgetPlayerDeath.hpp"
 
-Actor::Actor(): m_position(Vec3(0, 0, 0)), m_orientation(EulerAngles(0, 0, 0)), m_color(Rgba8::WHITE), m_bIsStatic(false), m_physicalHeight(2.0f), m_physicalRadius(1.0f)
+Actor::Actor(): m_position(Vec3(0, 0, 0)), m_orientation(EulerAngles(0, 0, 0)), m_bIsStatic(false), m_physicalHeight(2.0f), m_physicalRadius(1.0f), m_color(Rgba8::WHITE)
 {
     m_collisionZCylinder = ZCylinder(m_position, m_physicalRadius, m_physicalHeight, true);
     InitLocalVertex();
@@ -27,12 +30,13 @@ Actor::Actor(): m_position(Vec3(0, 0, 0)), m_orientation(EulerAngles(0, 0, 0)), 
 }
 
 Actor::Actor(const Vec3& position, const EulerAngles& orientation, const Rgba8& color, float physicalHeight, float physicalRadius, bool bIsStatic): m_position(position), m_orientation(orientation),
-    m_color(color), m_bIsStatic(bIsStatic), m_physicalHeight(physicalHeight), m_physicalRadius(physicalRadius)
+    m_bIsStatic(bIsStatic), m_physicalHeight(physicalHeight), m_physicalRadius(physicalRadius), m_color(color)
 {
     m_collisionZCylinder = ZCylinder(m_position, m_physicalRadius, m_physicalHeight, true);
     InitLocalVertex();
     printf("Object::Actor    + Creating Actor at (%f, %f, %f)\n", m_position.x, m_position.y, m_position.z);
 }
+
 
 Actor::Actor(const SpawnInfo& spawnInfo)
 {
@@ -51,7 +55,7 @@ Actor::Actor(const SpawnInfo& spawnInfo)
     m_collisionZCylinder = ZCylinder(spawnInfo.m_position, m_physicalRadius, m_physicalHeight, true);
     for (std::string items : definition->m_inventory)
     {
-        const WeaponDefinition* weapon = WeaponDefinition::GetByName(items);
+        WeaponDefinition* weapon = WeaponDefinition::GetByName(items);
         if (weapon)
             m_weapons.push_back(new Weapon(weapon, this));
     }
@@ -197,15 +201,12 @@ void Actor::OnColliedEnter(Actor* other)
         {
             return;
         }
-        else
-        {
-            float randomDamage = g_rng->RollRandomFloatInRange(m_definition->m_damageOnCollide.m_min, m_definition->m_damageOnCollide.m_max);
-            other->Damage(randomDamage, m_owner->m_handle);
-            Vec3 forward, left, right;
-            m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
-            other->AddImpulse(m_definition->m_impulseOnCollied * forward);
-            SetActorDead();
-        }
+        float randomDamage = g_rng->RollRandomFloatInRange(m_definition->m_damageOnCollide.m_min, m_definition->m_damageOnCollide.m_max);
+        other->Damage(randomDamage, m_owner->m_handle);
+        Vec3 forward, left, right;
+        m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
+        other->AddImpulse(m_definition->m_impulseOnCollied * forward);
+        SetActorDead();
         return;
     }
     // if self not projectile other is
@@ -215,15 +216,12 @@ void Actor::OnColliedEnter(Actor* other)
         {
             return;
         }
-        else
-        {
-            float randomDamage = g_rng->RollRandomFloatInRange(other->m_definition->m_damageOnCollide.m_min, other->m_definition->m_damageOnCollide.m_max);
-            Damage(randomDamage, other->m_handle);
-            Vec3 forward, left, right;
-            other->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
-            AddImpulse(other->m_definition->m_impulseOnCollied * forward);
-            other->SetActorDead();
-        }
+        float randomDamage = g_rng->RollRandomFloatInRange(other->m_definition->m_damageOnCollide.m_min, other->m_definition->m_damageOnCollide.m_max);
+        Damage(randomDamage, other->m_handle);
+        Vec3 forward, left, right;
+        other->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, right);
+        AddImpulse(other->m_definition->m_impulseOnCollied * forward);
+        other->SetActorDead();
         return;
     }
 
@@ -235,13 +233,14 @@ void Actor::OnColliedEnter(Actor* other)
         float B_bottom = other->m_position.z;
         float B_top    = other->m_position.z + other->m_physicalHeight;
 
-        FloatRange rangeA = FloatRange(A_bottom, A_top);
-        FloatRange rangeB = FloatRange(B_bottom, B_top);
+        auto rangeA = FloatRange(A_bottom, A_top);
+        auto rangeB = FloatRange(B_bottom, B_top);
         if (rangeA.IsOverlappingWith(rangeB))
         {
-            Vec2 pos2D      = Vec2(m_position.x, m_position.y);
-            Vec2 otherPos2D = Vec2(other->m_position.x, other->m_position.y);
-            PushDiscOutOfDisc2D(otherPos2D, other->m_physicalRadius, pos2D, m_physicalRadius);
+            auto pos2D      = Vec2(m_position.x, m_position.y);
+            auto otherPos2D = Vec2(other->m_position.x, other->m_position.y);
+            PushDiscsOutOfEachOther2D(otherPos2D, other->m_physicalRadius, pos2D, m_physicalRadius);
+            //PushDiscOutOfDisc2D(otherPos2D, other->m_physicalRadius, pos2D, m_physicalRadius);
             other->m_position = Vec3(otherPos2D.x, otherPos2D.y, other->m_position.z);
         }
         else
@@ -269,7 +268,7 @@ void Actor::OnColliedEnter(AABB2& tileXYBound)
 {
     if (!m_bIsStatic)
     {
-        Vec2 pos2D         = Vec2(m_position.x, m_position.y);
+        auto pos2D         = Vec2(m_position.x, m_position.y);
         bool colliedWithXY = PushDiscOutOfAABB2D(pos2D, m_physicalRadius, tileXYBound);
         if (colliedWithXY && m_definition->m_dieOnCollide)
             SetActorDead();
@@ -306,9 +305,36 @@ void Actor::Damage(float damage, ActorHandle instigator)
 {
     m_health -= damage;
     printf("Actor::Damage    Actor %s was Damaged, health now %f\n", m_definition->m_name.c_str(), m_health);
+
+    /// Sound with disable duplication sounds
+    SoundID actorDamagedSound = m_definition->GetSoundByName("Hurt")->GetSoundID();
+    auto    it                = m_soundPlaybackIDs.find(actorDamagedSound);
+    if (it != m_soundPlaybackIDs.end())
+    {
+        SoundPlaybackID playbackID = it->second;
+        if (!g_theAudio->IsPlaying(playbackID))
+        {
+            SoundPlaybackID id = g_theAudio->StartSoundAt(actorDamagedSound, m_position);
+            m_soundPlaybackIDs.insert(std::pair<SoundID, SoundPlaybackID>(id, actorDamagedSound));
+        }
+    }
+    else
+    {
+        SoundPlaybackID id = g_theAudio->StartSoundAt(actorDamagedSound, m_position);
+        m_soundPlaybackIDs.insert(std::pair<SoundID, SoundPlaybackID>(id, actorDamagedSound));
+    }
+
+
     if (m_health <= 0.f)
     {
         SetActorDead();
+        auto instigatorController = dynamic_cast<PlayerController*>(m_map->GetActorByHandle(instigator)->m_controller);
+        auto targetController     = dynamic_cast<PlayerController*>(m_controller);
+        if (instigatorController && targetController)
+        {
+            g_thePlayerSaveSubsystem->GetPlayerSaveData(targetController->m_index)->m_numOfDeaths++;
+            g_thePlayerSaveSubsystem->GetPlayerSaveData(instigatorController->m_index)->m_numOfKilled++;
+        }
     }
     if (m_aiController)
         m_aiController->DamagedBy(instigator);
@@ -318,6 +344,20 @@ bool Actor::SetActorDead(bool bNewDead)
 {
     m_bIsDead = bNewDead;
     PlayAnimationByName("Death", true);
+    if (m_definition->GetSoundByName("Death"))
+    {
+        SoundID actorDamagedSound = m_definition->GetSoundByName("Death")->GetSoundID();
+        g_theAudio->StartSoundAt(actorDamagedSound, m_position);
+    }
+
+    // Handel Player Actor Death.
+    /*PlayerController* player = dynamic_cast<PlayerController*>(m_controller);
+    if (player)
+    {
+        WidgetPlayerDeath* playerDeathWidget = new WidgetPlayerDeath();
+        g_theWidgetSubsystem->AddToPlayerViewport(playerDeathWidget, player);
+    }*/
+
     for (Vertex_PCU& m_vertex : m_vertexes)
     {
         m_vertex.m_color = m_vertex.m_color * 0.4f;
@@ -399,7 +439,7 @@ void Actor::Render(PlayerController* toPlayer) const
     Vec3 viewingDirection = GetModelToWorldTransform().GetOrthonormalInverse().TransformVectorQuantity3D(dirCameraToActor);
 
     AnimationGroup* animationGroup = m_currentPlayingAnimationGroup;
-    if (animationGroup == nullptr && (int)m_definition->m_animationGroups.size() > 0) // We use the index 0 animation group
+    if (animationGroup == nullptr && static_cast<int>(m_definition->m_animationGroups.size()) > 0) // We use the index 0 animation group
     {
         animationGroup = &m_definition->m_animationGroups[0];
     }
@@ -410,7 +450,7 @@ void Actor::Render(PlayerController* toPlayer) const
 
 
     Vec2 spriteOffSet = -m_definition->m_size * m_definition->m_pivot;
-    Vec3 bottomLeft   = Vec3(0, spriteOffSet.x, spriteOffSet.y);
+    auto bottomLeft   = Vec3(0, spriteOffSet.x, spriteOffSet.y);
     Vec3 bottomRight  = bottomLeft + Vec3(0, m_definition->m_size.x, 0);
     Vec3 topLeft      = bottomLeft + Vec3(0, 0, m_definition->m_size.y);
     Vec3 topRight     = bottomRight + Vec3(0, 0, m_definition->m_size.y);
@@ -445,7 +485,7 @@ void Actor::Render(PlayerController* toPlayer) const
         vertexesUnlit.reserve(8192);
         AddVertsForQuad3D(vertexesUnlit, bottomLeft, bottomRight, topRight, topLeft, Rgba8::WHITE, uvAtTime);
         g_theRenderer->SetModelConstants(localToWorldMat, Rgba8::WHITE);
-        g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_NONE); // TODO: fix the SOLID_CULL_BACK triangle issue
+        g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_BACK);
         g_theRenderer->BindShader(m_definition->m_shader);
         g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
         g_theRenderer->BindTexture(&spriteAtTime.GetTexture());
@@ -474,7 +514,7 @@ bool Actor::PredicateRender(PlayerController* toPlayer) const
     if (!m_definition->m_visible) return false; // Check if visible. If not, return.
     if (m_controller && dynamic_cast<PlayerController*>(m_controller)) // Check if we are the rendering player and not in free fly mode. If so, return.
     {
-        PlayerController* playerController = dynamic_cast<PlayerController*>(m_controller);
+        auto playerController = dynamic_cast<PlayerController*>(m_controller);
         if (g_theGame->GetIsSingleMode() && !playerController->m_bCameraMode) // If we in single mode and in free cam mode we do not render actor
             return false;
         if (playerController == toPlayer && !playerController->m_bCameraMode) // If we equal to self and in free cam mode we do not render actor
@@ -516,34 +556,28 @@ AnimationGroup* Actor::PlayAnimationByName(std::string animationName, bool force
         {
             return foundedGroup;
         }
-        else
+        /// We want to replace to new animation, force update it whether or not it finished
+        if (force)
         {
-            /// We want to replace to new animation, force update it whether or not it finished
-            if (force)
+            m_currentPlayingAnimationGroup = foundedGroup;
+            m_animationTimer->Start();
+            return foundedGroup;
+        }
+        if (m_currentPlayingAnimationGroup)
+        {
+            bool isCurrentAnimFinished = m_animationTimer->GetElapsedTime() >= m_currentPlayingAnimationGroup->GetAnimationLength();
+            if (isCurrentAnimFinished)
             {
                 m_currentPlayingAnimationGroup = foundedGroup;
                 m_animationTimer->Start();
                 return foundedGroup;
             }
-            else
-            {
-                if (m_currentPlayingAnimationGroup)
-                {
-                    bool isCurrentAnimFinished = m_animationTimer->GetElapsedTime() >= m_currentPlayingAnimationGroup->GetAnimationLength();
-                    if (isCurrentAnimFinished)
-                    {
-                        m_currentPlayingAnimationGroup = foundedGroup;
-                        m_animationTimer->Start();
-                        return foundedGroup;
-                    }
-                }
-                else
-                {
-                    m_currentPlayingAnimationGroup = foundedGroup;
-                    m_animationTimer->Start();
-                    return foundedGroup;
-                }
-            }
+        }
+        else
+        {
+            m_currentPlayingAnimationGroup = foundedGroup;
+            m_animationTimer->Start();
+            return foundedGroup;
         }
     }
     return nullptr;
@@ -561,7 +595,7 @@ void Actor::InitLocalVertex()
     localCylinder.m_center  = Vec3(0, 0, m_physicalHeight / 2.0f);
     AddVertsForCylinderZ3D(m_vertexes, localCylinder, m_color * 0.5f, AABB2::ZERO_TO_ONE);
     AddVertsForCylinderZ3D(m_vertexesWireframe, localCylinder, m_color, AABB2::ZERO_TO_ONE);
-    Vec3 localConeStartPoint = Vec3(m_definition->m_physicsRadius - 0.05f, 0, m_definition->m_eyeHeight * 0.85f);
+    auto localConeStartPoint = Vec3(m_definition->m_physicsRadius - 0.05f, 0, m_definition->m_eyeHeight * 0.85f);
     Vec3 localConeEndPoint   = localConeStartPoint + Vec3(m_definition->m_physicsRadius / 2.f, 0, 0);
     AddVertsForCone3D(m_vertexesCone, localConeEndPoint, localConeStartPoint, m_definition->m_physicsHeight / 5.0f, m_color * 0.5f);
     AddVertsForCone3D(m_vertexesConeWireframe, localConeEndPoint, localConeStartPoint, m_definition->m_physicsHeight / 5.0f, m_color);
