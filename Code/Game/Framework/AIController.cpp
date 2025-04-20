@@ -1,6 +1,7 @@
 ﻿#include "AIController.hpp"
 
 #include "Engine/Math/MathUtils.hpp"
+#include "Game/GameCommon.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Definition/WeaponDefinition.hpp"
 #include "Game/Gameplay/Map.hpp"
@@ -41,11 +42,11 @@ void AIController::Update(float deltaTime)
     float currentYaw = controlledActor->m_orientation.m_yawDegrees;
     float newYaw     = GetTurnedTowardDegrees(currentYaw, desiredYaw, maxTurnDegreesThisFrame);
 
-    Vec3 newDirectionTurningTo = Vec3(newYaw, controlledActor->m_orientation.m_pitchDegrees, controlledActor->m_orientation.m_rollDegrees);
+    auto newDirectionTurningTo = Vec3(newYaw, controlledActor->m_orientation.m_pitchDegrees, controlledActor->m_orientation.m_rollDegrees);
     controlledActor->TurnInDirection(newDirectionTurningTo);
     float distanceToTarget = toTarget3D.GetLength();
     float combinedRadius   = controlledActor->m_physicalRadius + targetActor->m_physicalRadius;
-    if (distanceToTarget > combinedRadius + 0.1f)
+    if (distanceToTarget > combinedRadius)
     {
         float moveSpeed = controlledActor->m_definition->m_runSpeed;
         Vec3  forward, left, up;
@@ -56,10 +57,11 @@ void AIController::Update(float deltaTime)
     /// Hanlde melee weapon based on melee weapon range
     if (controlledActor->m_currentWeapon && controlledActor->m_currentWeapon->m_definition->m_meleeCount > 0)
     {
-        if (distanceToTarget < controlledActor->m_currentWeapon->m_definition->m_meleeRange + targetActor->m_physicalRadius)
+        /// 0.2f ensure that AI try attack out side of meel range give player more opportunity.
+        if (distanceToTarget < controlledActor->m_currentWeapon->m_definition->m_meleeRange + targetActor->m_physicalRadius + 0.2f)
         {
             controlledActor->m_currentWeapon->Fire();
-            controlledActor->PlayAnimationByName(m_state,true);
+            controlledActor->PlayAnimationByName(m_state, true);
         }
     }
     /*else
