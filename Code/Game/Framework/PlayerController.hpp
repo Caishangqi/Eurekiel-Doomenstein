@@ -25,6 +25,7 @@ public:
     PlayerController(Map* map);
     ~PlayerController() override;
 
+
     void Possess(ActorHandle& actorHandle) override;
 
     /// Update
@@ -45,7 +46,6 @@ public:
     DeviceType GetInputDeviceType() const;
     Mat44      GetModelToWorldTransform() const;
 
-public:
     bool m_bCameraMode = false; // Toggles whether we are controlling an actor or a free-fly camera currently.
 
 private:

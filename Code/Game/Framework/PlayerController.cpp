@@ -1,16 +1,17 @@
 ﻿#include "PlayerController.hpp"
 
+#include "WidgetSubsystem.hpp"
 #include "../GameCommon.hpp"
 #include "Engine/Core/EngineCommon.hpp"
 #include "Engine/Input/InputSystem.hpp"
 #include "Engine/Math/MathUtils.hpp"
 #include "Engine/Renderer/Camera.hpp"
-#include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
 #include "../Gameplay/Map.hpp"
 #include "Game/Game.hpp"
 #include "Game/Definition/ActorDefinition.hpp"
 #include "Game/Gameplay/Weapon.hpp"
+#include "Game/Gameplay/Widget/WidgetPlayerDeath.hpp"
 
 
 PlayerController::PlayerController(Map* map): Controller(map)
@@ -32,6 +33,7 @@ PlayerController::~PlayerController()
     printf("Object::PlayerController    - Destroy PlayerController and free resources\n");
     POINTER_SAFE_DELETE(m_worldCamera)
 }
+
 
 void PlayerController::Possess(ActorHandle& actorHandle)
 {
@@ -58,7 +60,7 @@ void PlayerController::UpdateWeapon(float deltaSeconds)
     if (m_bCameraMode)
         return;
     Actor* possessActor = m_map->GetActorByHandle(m_actorHandle);
-    if (possessActor->m_definition->m_name == "Marine")
+    if (possessActor && possessActor->m_definition->m_name == "Marine")
     {
         if (possessActor->m_currentWeapon)
             possessActor->m_currentWeapon->Update(deltaSeconds);
@@ -90,6 +92,8 @@ void PlayerController::UpdateKeyboardInput(float deltaSeconds)
     {
         Actor* possessActor = GetActor();
         if (!possessActor)
+            return;
+        if (possessActor->m_bIsDead) /// Handle player Actor dead
             return;
         EulerAngles possessActorOrientation = possessActor->m_orientation;
         float       actorSpeed              = possessActor->m_definition->m_walkSpeed;
@@ -148,19 +152,20 @@ void PlayerController::UpdateKeyboardInput(float deltaSeconds)
         if (g_theInput->WasKeyJustPressed(KEYCODE_LEFTARROW))
         {
             auto it    = std::find(possessActor->m_weapons.begin(), possessActor->m_weapons.end(), possessActor->m_currentWeapon);
-            int  index = (int)(it - possessActor->m_weapons.begin());
+            int  index = static_cast<int>(it - possessActor->m_weapons.begin());
             index--;
-            int newIndex = (int)((index + possessActor->m_weapons.size()) % possessActor->m_weapons.size());
+            int newIndex = static_cast<int>((index + possessActor->m_weapons.size()) % possessActor->m_weapons.size());
             possessActor->EquipWeapon(newIndex);
         }
         if (g_theInput->WasKeyJustPressed(KEYCODE_RIGHTARROW))
         {
             auto it    = std::find(possessActor->m_weapons.begin(), possessActor->m_weapons.end(), possessActor->m_currentWeapon);
-            int  index = (int)(it - possessActor->m_weapons.begin());
+            int  index = static_cast<int>(it - possessActor->m_weapons.begin());
             index++;
-            int newIndex = (int)index % possessActor->m_weapons.size();
+            int newIndex = index % possessActor->m_weapons.size();
             possessActor->EquipWeapon(newIndex);
         }
+
 
         m_position    = possessActor->m_position;
         m_orientation = possessActor->m_orientation;
@@ -229,6 +234,8 @@ void PlayerController::UpdateControllerInput(float deltaSeconds)
         Actor* possessActor = GetActor();
         if (!possessActor)
             return;
+        if (possessActor->m_bIsDead) /// Handle player Actor dead
+            return;
         EulerAngles possessActorOrientation = possessActor->m_orientation;
 
         float actorSpeed = possessActor->m_definition->m_walkSpeed;
@@ -240,12 +247,20 @@ void PlayerController::UpdateControllerInput(float deltaSeconds)
         float leftTrigger   = controller.GetLeftTrigger();
         float rightTrigger  = controller.GetRightTrigger();
 
+
         if (rightStickMag > 0.f)
         {
-            possessActorOrientation.m_yawDegrees += -(rightStickPos * speed * rightStickMag * turnRate).x;
-            possessActorOrientation.m_pitchDegrees += -(rightStickPos * speed * rightStickMag * turnRate).y;
+            turnRate = possessActor->m_definition->m_turnSpeed;
+            possessActorOrientation.m_yawDegrees += -(rightStickPos * speed * rightStickMag * turnRate * deltaSeconds).x;
+            possessActorOrientation.m_pitchDegrees += -(rightStickPos * speed * rightStickMag * turnRate * deltaSeconds).y;
             possessActor->TurnInDirection(Vec3(possessActorOrientation));
         }
+
+        if (controller.IsButtonDown(XBOX_BUTTON_A))
+        {
+            actorSpeed = possessActor->m_definition->m_runSpeed;
+        }
+
         Vec3 forward, left, up;
         possessActor->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
         if (leftStickMag > 0.f)
@@ -257,17 +272,12 @@ void PlayerController::UpdateControllerInput(float deltaSeconds)
             possessActor->PlayAnimationByName("Walk");
         }
 
-        if (g_theInput->IsKeyDown(KEYCODE_LEFT_SHIFT) || controller.IsButtonDown(XBOX_BUTTON_A))
-        {
-            speed *= 15.f;
-        }
-
         if (controller.WasButtonJustPressed(XBOX_BUTTON_DPAD_DOWN))
         {
             auto it    = std::find(possessActor->m_weapons.begin(), possessActor->m_weapons.end(), possessActor->m_currentWeapon);
-            int  index = (int)(it - possessActor->m_weapons.begin());
+            int  index = static_cast<int>(it - possessActor->m_weapons.begin());
             index--;
-            int newIndex = (int)((index + possessActor->m_weapons.size()) % possessActor->m_weapons.size());
+            int newIndex = static_cast<int>((index + possessActor->m_weapons.size()) % possessActor->m_weapons.size());
             possessActor->EquipWeapon(newIndex);
         }
         if (rightTrigger > 0.f)
@@ -285,9 +295,9 @@ void PlayerController::UpdateControllerInput(float deltaSeconds)
         if (controller.WasButtonJustPressed(XBOX_BUTTON_DPAD_UP))
         {
             auto it    = std::find(possessActor->m_weapons.begin(), possessActor->m_weapons.end(), possessActor->m_currentWeapon);
-            int  index = (int)(it - possessActor->m_weapons.begin());
+            int  index = static_cast<int>(it - possessActor->m_weapons.begin());
             index++;
-            int newIndex = (int)index % possessActor->m_weapons.size();
+            int newIndex = index % possessActor->m_weapons.size();
             possessActor->EquipWeapon(newIndex);
         }
 
@@ -375,12 +385,16 @@ void PlayerController::HandleActorDead(float deltaSeconds)
         Actor* possessActor = m_map->GetActorByHandle(m_actorHandle);
         if (possessActor && possessActor->m_bIsDead && possessActor->m_definition->m_name == "Marine")
         {
+            if (possessActor->m_dead <= deltaSeconds)
+            {
+                auto playerDeathWidget = new WidgetPlayerDeath();
+                g_theWidgetSubsystem->AddToPlayerViewport(playerDeathWidget, this);
+            }
             Vec3  startPos      = possessActor->m_position + Vec3(0, 0, possessActor->m_definition->m_eyeHeight);
             Vec3  endPos        = possessActor->m_position;
-            float deathFraction = possessActor->m_dead / possessActor->m_definition->m_corpseLifetime;
+            float deathFraction = GetClamped(possessActor->m_dead / possessActor->m_definition->m_corpseLifetime, 0.f, 1.f);
             float interpolate   = Interpolate(startPos.z, endPos.z, deathFraction);
             m_position          = Vec3(possessActor->m_position.x, possessActor->m_position.y, interpolate);
-            //m_orientation       = possessActor->m_orientation;
         }
     }
 }
@@ -415,7 +429,7 @@ void PlayerController::UpdateDebugMessage()
         size.m_maxs.y = size.m_mins.y + 60;
         size.m_maxs.x /= 2;
         size.m_maxs.x += 200;
-        Actor* possessActor = GetActor();
+        // Actor* possessActor = GetActor();
         /*if (possessActor)
             DebugAddScreenText(Stringf("Possessor Health: %.1f", possessActor->m_health), size, 18.f, 0);*/
     }
