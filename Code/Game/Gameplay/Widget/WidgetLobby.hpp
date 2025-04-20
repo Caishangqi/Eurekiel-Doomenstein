@@ -7,7 +7,6 @@ public:
     WidgetLobby();
     ~WidgetLobby() override;
 
-public:
     void Draw() const override;
     void Update() override;
 

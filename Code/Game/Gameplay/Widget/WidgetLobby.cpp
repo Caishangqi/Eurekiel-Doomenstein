@@ -1,10 +1,12 @@
 ﻿#include "WidgetLobby.hpp"
 
+#include "Engine/Audio/AudioSystem.hpp"
 #include "Engine/Input/InputSystem.hpp"
 #include "Engine/Renderer/BitmapFont.hpp"
 #include "Engine/Renderer/Renderer.hpp"
 #include "Game/App.hpp"
 #include "Game/Game.hpp"
+#include "Game/Framework/ResourceSubsystem.hpp"
 #include "Game/Gameplay/Save/PlayerSaveSubsystem.hpp"
 
 class XboxController;
@@ -15,6 +17,8 @@ WidgetLobby::WidgetLobby()
 
 WidgetLobby::~WidgetLobby()
 {
+    SoundID mainMenuSoundID = g_theAudio->CreateOrGetSound(g_gameConfigBlackboard.GetValue("mainMenuMusic", ""));
+    g_theResourceSubsystem->ForceStopSoundAndRemoveSoundPlaybackID(mainMenuSoundID);
 }
 
 void WidgetLobby::Draw() const
@@ -51,8 +55,8 @@ void WidgetLobby::Draw() const
         AABB2                   bound = g_theGame->m_screenSpace;
         std::vector<Vertex_PCU> textVerts;
         textVerts.reserve(4096);
-        AABB2             bottomBound             = AABB2(Vec2(0.f, 0.f), Vec2(bound.m_maxs.x, bound.m_maxs.y / 2.f));
-        AABB2             topBound                = AABB2(Vec2(0.f, bound.m_maxs.y / 2.f), Vec2(bound.m_maxs.x, bound.m_maxs.y));
+        auto              bottomBound             = AABB2(Vec2(0.f, 0.f), Vec2(bound.m_maxs.x, bound.m_maxs.y / 2.f));
+        auto              topBound                = AABB2(Vec2(0.f, bound.m_maxs.y / 2.f), Vec2(bound.m_maxs.x, bound.m_maxs.y));
         BitmapFont*       g_testFont              = g_theRenderer->CreateOrGetBitmapFont("Data/Fonts/SquirrelFixedFont");
         PlayerController* topDisplayController    = g_theGame->GetLocalPlayer(1);
         PlayerController* bottomDisplayController = g_theGame->GetLocalPlayer(2);
@@ -108,6 +112,7 @@ void WidgetLobby::UpdateKeyInput()
         {
             if (startButtonPressed)
             {
+                PLAY_SOUND_CLICK("buttonClickSound");
                 if (controllerIndex == 1)
                     g_theGame->CreateLocalPlayer(2, DeviceType::CONTROLLER);
                 else if (controllerIndex == 2)
@@ -115,11 +120,13 @@ void WidgetLobby::UpdateKeyInput()
             }
             else if (spaceButtonPressed)
             {
+                PLAY_SOUND_CLICK("buttonClickSound");
                 HandleGameStartProcess();
                 RemoveFromViewport();
             }
             else if (escapeButtonPressed)
             {
+                PLAY_SOUND_CLICK("buttonClickSound");
                 g_theGame->EnterState(GameState::ATTRACT);
                 RemoveAllLocalPlayerControllers();
                 RemoveFromViewport();
@@ -129,6 +136,7 @@ void WidgetLobby::UpdateKeyInput()
         {
             if (spaceButtonPressed)
             {
+                PLAY_SOUND_CLICK("buttonClickSound");
                 if (controllerIndex == 1)
                     g_theGame->CreateLocalPlayer(2, DeviceType::KEYBOARD_AND_MOUSE);
                 else if (controllerIndex == 2)
@@ -136,11 +144,13 @@ void WidgetLobby::UpdateKeyInput()
             }
             else if (startButtonPressed)
             {
+                PLAY_SOUND_CLICK("buttonClickSound");
                 HandleGameStartProcess();
                 RemoveFromViewport();
             }
             else if (backButtonPressed)
             {
+                PLAY_SOUND_CLICK("buttonClickSound");
                 g_theGame->EnterState(GameState::ATTRACT);
                 RemoveAllLocalPlayerControllers();
                 RemoveFromViewport();
@@ -151,21 +161,25 @@ void WidgetLobby::UpdateKeyInput()
     {
         if (startButtonPressed)
         {
+            PLAY_SOUND_CLICK("buttonClickSound");
             HandleGameStartProcess();
             RemoveFromViewport();
         }
         if (spaceButtonPressed)
         {
+            PLAY_SOUND_CLICK("buttonClickSound");
             HandleGameStartProcess();
             RemoveFromViewport();
         }
         if (escapeButtonPressed)
         {
+            PLAY_SOUND_CLICK("buttonClickSound");
             PlayerController* keyboardController = g_theGame->GetControllerByDeviceType(DeviceType::KEYBOARD_AND_MOUSE);
             g_theGame->RemoveLocalPlayer(keyboardController->GetControllerIndex());
         }
         else if (backButtonPressed)
         {
+            PLAY_SOUND_CLICK("buttonClickSound");
             PlayerController* gamepadController = g_theGame->GetControllerByDeviceType(DeviceType::CONTROLLER);
             g_theGame->RemoveLocalPlayer(gamepadController->GetControllerIndex());
         }
