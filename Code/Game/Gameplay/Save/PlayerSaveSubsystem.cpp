@@ -4,7 +4,7 @@ std::vector<PlayerSaveData> PlayerSaveSubsystem::s_playerSavedData = {};
 void PlayerSaveSubsystem::ClearSaves()
 {
     printf("PlayerSaveSubsystem::ClearSaves       Clear All player Data\n");
-    PlayerSaveSubsystem::s_playerSavedData.clear();
+    s_playerSavedData.clear();
 }
 
 PlayerSaveData* PlayerSaveSubsystem::GetPlayerSaveData(int id)
