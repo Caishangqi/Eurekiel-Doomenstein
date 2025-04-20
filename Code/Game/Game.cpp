@@ -20,8 +20,10 @@
 #include "Engine/Renderer/Camera.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
+#include "Framework/ResourceSubsystem.hpp"
 #include "Framework/WidgetSubsystem.hpp"
 #include "Gameplay/Map.hpp"
+#include "Gameplay/Save/PlayerSaveSubsystem.hpp"
 #include "Gameplay/Widget/WidgetAttract.h"
 
 Game::Game()
@@ -84,6 +86,11 @@ Game::~Game()
     ActorDefinition::ClearDefinitions();
     WeaponDefinition::ClearDefinitions();
     TileDefinition::ClearDefinitions();
+
+    for (PlayerController* controller : m_localPlayerControllers)
+    {
+        POINTER_SAFE_DELETE(controller)
+    }
 }
 
 
@@ -92,7 +99,6 @@ void Game::Render() const
     g_theRenderer->SetRasterizerMode(RasterizerMode::SOLID_CULL_BACK);
     g_theRenderer->SetBlendMode(BlendMode::OPAQUE);
     g_theRenderer->SetDepthMode(DepthMode::READ_WRITE_LESS_EQUAL);
-    g_theWidgetSubsystem->Render();
 
     if (m_currentState == GameState::PLAYING)
     {
@@ -108,12 +114,24 @@ void Game::Render() const
             DebugRenderWorld(*g_theGame->m_localPlayerControllers[0]->m_worldCamera);
         DebugRenderScreen(*g_theGame->m_screenCamera);
     }
+    g_theWidgetSubsystem->Render();
 }
 
 
 void Game::UpdateCameras(float deltaTime)
 {
     m_screenCamera->Update(deltaTime);
+}
+
+void Game::UpdateListeners(float deltaTime)
+{
+    UNUSED(deltaTime)
+    for (PlayerController* controller : m_localPlayerControllers)
+    {
+        Vec3 forward, left, up;
+        controller->m_orientation.GetAsVectors_IFwd_JLeft_KUp(forward, left, up);
+        g_theAudio->UpdateListener(controller->m_index - 1, controller->m_position, forward, up); // Index is an adjustment
+    }
 }
 
 
@@ -135,6 +153,7 @@ void Game::Update()
                                     controller->m_orientation.m_rollDegrees),
                             0);
         }
+        UpdateListeners(Clock::GetSystemClock().GetDeltaSeconds());
     }
     ///
 
@@ -173,6 +192,7 @@ bool Game::GameExitEvent(EventArgs& args)
     game->m_map = nullptr;
     game->m_localPlayerControllers.clear();
     game->EnterState(GameState::ATTRACT);
+    g_thePlayerSaveSubsystem->ClearSaves();
     g_theInput->SetCursorMode(CursorMode::POINTER);
     return true;
 }
@@ -185,7 +205,7 @@ bool Game::GameStateChangeEvent(EventArgs& args)
 
 PlayerController* Game::CreateLocalPlayer(int id, DeviceType deviceType)
 {
-    PlayerController* newPlayer = new PlayerController(nullptr);
+    auto newPlayer = new PlayerController(nullptr);
     newPlayer->SetInputDeviceType(deviceType);
     for (PlayerController* m_local_player_controller : m_localPlayerControllers)
     {
@@ -252,7 +272,6 @@ void Game::EnterState(GameState state)
     args.SetValue("State", std::to_string(static_cast<int>(state)));
     m_currentState = state;
     g_theEventSystem->FireEvent("GameStateChangeEvent", args);
-
     switch (state)
     {
     case GameState::PLAYING:
@@ -280,6 +299,8 @@ void Game::ExitState(GameState state)
 
 void Game::EnterAttractState()
 {
+    SoundID mainMenuSoundID = g_theAudio->CreateOrGetSound(g_gameConfigBlackboard.GetValue("gameMusic", ""));
+    g_theResourceSubsystem->ForceStopSoundAndRemoveSoundPlaybackID(mainMenuSoundID);
     Widget* attractWidget = new WidgetAttract();
     g_theWidgetSubsystem->AddToViewport(attractWidget);
 }
@@ -292,12 +313,21 @@ void Game::EnterPlayingState()
 {
     printf("Event::GameStartEvent    Starting game...\n");
     g_theInput->SetCursorMode(CursorMode::FPS);
-
+    g_theAudio->SetNumListeners(static_cast<int>(m_localPlayerControllers.size()));
     std::string defaultMapName = g_gameConfigBlackboard.GetValue("defaultMap", "Default");
     m_map                      = new Map(this, MapDefinition::GetByName(defaultMapName));
     for (PlayerController* playerController : m_localPlayerControllers)
     {
         playerController->m_map = m_map;
+    }
+    SoundID         mainMenuSoundID    = g_theAudio->CreateOrGetSound(g_gameConfigBlackboard.GetValue("gameMusic", ""));
+    SoundPlaybackID mainMenuPlaybackID = g_theAudio->StartSound(mainMenuSoundID, true, 0.25f);
+    g_theResourceSubsystem->CachedSoundPlaybackID(mainMenuPlaybackID, mainMenuSoundID);
+    for (PlayerController* player : m_localPlayerControllers)
+    {
+        PlayerSaveData saveData{};
+        saveData.m_playerID = player->m_index;
+        g_thePlayerSaveSubsystem->CreatePlayerSaveData(saveData);
     }
 }
 
@@ -311,6 +341,7 @@ void Game::HandleKeyBoardEvent(float deltaTime)
     {
         if (m_currentState == GameState::PLAYING)
         {
+            PLAY_SOUND_CLICK("buttonClickSound");
             g_theEventSystem->FireEvent("GameExitEvent");
         }
     }

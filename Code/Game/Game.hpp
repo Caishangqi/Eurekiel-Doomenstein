@@ -53,8 +53,10 @@ public:
     // Camera
     void UpdateCameras(float deltaTime);
 
+    /// Audio
+    void UpdateListeners(float deltaTime);
 
-public: /// Game State
+    /// Game State
     GameState m_currentState = GameState::ATTRACT;
     GameState m_nextState    = GameState::ATTRACT;
     ///
