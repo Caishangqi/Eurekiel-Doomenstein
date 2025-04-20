@@ -13,16 +13,20 @@
 #include "Engine/Renderer/Camera.hpp"
 #include "Engine/Renderer/DebugRenderSystem.h"
 #include "Engine/Renderer/Renderer.hpp"
+#include "Framework/ResourceSubsystem.hpp"
 #include "Framework/WidgetSubsystem.hpp"
+#include "Gameplay/Save/PlayerSaveSubsystem.hpp"
 
-Window*                g_theWindow          = nullptr;
-Renderer*              g_theRenderer        = nullptr;
-App*                   g_theApp             = nullptr;
-RandomNumberGenerator* g_rng                = nullptr;
-InputSystem*           g_theInput           = nullptr;
-AudioSystem*           g_theAudio           = nullptr;
-Game*                  g_theGame            = nullptr;
-WidgetSubsystem*       g_theWidgetSubsystem = nullptr;
+Window*                g_theWindow              = nullptr;
+Renderer*              g_theRenderer            = nullptr;
+App*                   g_theApp                 = nullptr;
+RandomNumberGenerator* g_rng                    = nullptr;
+InputSystem*           g_theInput               = nullptr;
+AudioSystem*           g_theAudio               = nullptr;
+Game*                  g_theGame                = nullptr;
+WidgetSubsystem*       g_theWidgetSubsystem     = nullptr;
+ResourceSubsystem*     g_theResourceSubsystem   = nullptr;
+PlayerSaveSubsystem*   g_thePlayerSaveSubsystem = nullptr;
 
 App::App()
 {
@@ -84,6 +88,11 @@ void App::Startup()
     AudioSystemConfig audioConfig;
     g_theAudio = new AudioSystem(audioConfig);
 
+    ResourceSystemConfig resourceConfig;
+    g_theResourceSubsystem = new ResourceSubsystem(resourceConfig);
+
+    g_thePlayerSaveSubsystem = new PlayerSaveSubsystem();
+
     g_theEventSystem->Startup();
     g_theDevConsole->Startup();
     g_theInput->Startup();
@@ -92,6 +101,7 @@ void App::Startup()
     g_theWidgetSubsystem->Startup();
     DebugRenderSystemStartup(debugRenderConfig);
     g_theAudio->Startup();
+    g_theResourceSubsystem->Startup();
 
     g_theGame = new Game();
     g_rng     = new RandomNumberGenerator();
@@ -115,6 +125,7 @@ void App::Shutdown()
     g_theWindow->Shutdown();
     g_theInput->Shutdown();
     g_theEventSystem->Shutdown();
+    g_theResourceSubsystem->Shutdown();
     // Destroy all Engine Subsystem
     delete g_theAudio;
     g_theAudio = nullptr;
@@ -127,6 +138,12 @@ void App::Shutdown()
 
     delete g_theWindow;
     g_theWindow = nullptr;
+
+    delete g_theWidgetSubsystem;
+    g_theWidgetSubsystem = nullptr;
+
+    delete g_theResourceSubsystem;
+    g_theResourceSubsystem = nullptr;
 
     delete g_theInput;
     g_theInput = nullptr;
@@ -233,6 +250,7 @@ void App::BeginFrame()
     g_theWidgetSubsystem->BeginFrame();
     DebugRenderBeginFrame();
     g_theAudio->BeginFrame();
+    g_theResourceSubsystem->BeginFrame();
     g_theEventSystem->BeginFrame();
     g_theDevConsole->BeginFrame();
 }
@@ -281,6 +299,7 @@ void App::EndFrame()
     DebugRenderEndFrame();
     g_theInput->EndFrame();
     g_theAudio->EndFrame();
+    g_theResourceSubsystem->EndFrame();
     g_theEventSystem->EndFrame();
     g_theDevConsole->EndFrame();
     g_theGame->EndFrame();
