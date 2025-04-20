@@ -210,13 +210,18 @@
     <ClCompile Include="Framework\Hud.cpp" />
     <ClCompile Include="Framework\PlayerController.cpp">
     </ClCompile>
+    <ClCompile Include="Framework\ResourceSubsystem.cpp" />
     <ClCompile Include="Framework\Sound.cpp" />
     <ClCompile Include="Framework\Widget.cpp" />
     <ClCompile Include="Framework\WidgetSubsystem.cpp" />
     <ClCompile Include="Gameplay\Actor.cpp" />
     <ClCompile Include="Gameplay\Map.cpp" />
+    <ClCompile Include="Gameplay\Save\PlayerSaveSubsystem.cpp" />
     <ClCompile Include="Gameplay\Tile.cpp" />
     <ClCompile Include="Gameplay\Weapon.cpp" />
+    <ClCompile Include="Gameplay\Widget\WidgetAttract.cpp" />
+    <ClCompile Include="Gameplay\Widget\WidgetLobby.cpp" />
+    <ClCompile Include="Gameplay\Widget\WidgetPlayerDeath.cpp" />
     <ClCompile Include="Prop.cpp" />
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Entity.cpp" />
@@ -239,6 +244,7 @@
     <ClInclude Include="Framework\Controller.hpp" />
     <ClInclude Include="Framework\Hud.hpp" />
     <ClInclude Include="Framework\PlayerController.hpp" />
+    <ClInclude Include="Framework\ResourceSubsystem.hpp" />
     <ClInclude Include="Framework\Sound.hpp" />
     <ClInclude Include="Framework\Widget.hpp" />
     <ClInclude Include="Framework\WidgetSubsystem.hpp" />
@@ -246,8 +252,12 @@
     <ClInclude Include="Game.hpp" />
     <ClInclude Include="GameCommon.hpp" />
     <ClInclude Include="Gameplay\Map.hpp" />
+    <ClInclude Include="Gameplay\Save\PlayerSaveSubsystem.hpp" />
     <ClInclude Include="Gameplay\Tile.hpp" />
     <ClInclude Include="Gameplay\Weapon.hpp" />
+    <ClInclude Include="Gameplay\Widget\WidgetAttract.h" />
+    <ClInclude Include="Gameplay\Widget\WidgetLobby.hpp" />
+    <ClInclude Include="Gameplay\Widget\WidgetPlayerDeath.hpp" />
     <ClInclude Include="Prop.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
