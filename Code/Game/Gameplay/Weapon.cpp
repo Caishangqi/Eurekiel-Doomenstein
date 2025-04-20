@@ -19,7 +19,7 @@
 #include "Game/Framework/PlayerController.hpp"
 #include "Save/PlayerSaveSubsystem.hpp"
 
-Weapon::Weapon(const WeaponDefinition* definition, Actor* owner): m_definition(definition), m_owner(owner)
+Weapon::Weapon(WeaponDefinition* definition, Actor* owner): m_owner(owner), m_definition(definition)
 {
     m_animationTimer = new Timer(0, g_theGame->m_clock);
 
@@ -28,8 +28,8 @@ Weapon::Weapon(const WeaponDefinition* definition, Actor* owner): m_definition(d
     {
         Texture* baseTexture   = m_definition->m_hud->m_baseTexture;
         IntVec2  baseDimension = baseTexture->GetDimensions();
-        float    multiplier    = g_theGame->m_screenSpace.m_maxs.x / (float)baseDimension.x;
-        m_hudBaseBound         = AABB2(Vec2(0.0f, 0.0f), Vec2(g_theGame->m_screenSpace.m_maxs.x, (float)baseDimension.y * multiplier));
+        float    multiplier    = g_theGame->m_screenSpace.m_maxs.x / static_cast<float>(baseDimension.x);
+        m_hudBaseBound         = AABB2(Vec2(0.0f, 0.0f), Vec2(g_theGame->m_screenSpace.m_maxs.x, static_cast<float>(baseDimension.y) * multiplier));
     }
 }
 
@@ -50,12 +50,14 @@ void Weapon::Fire()
     {
         printf("Weapon::Fire    Weapon fired by %s\n", m_owner->m_definition->m_name.c_str());
         m_owner->m_controller->m_state = "Attack";
+        SoundID weaponFireSound        = m_definition->GetSoundByName("Fire")->GetSoundID();
+        g_theAudio->StartSoundAt(weaponFireSound, m_owner->m_position);
         if (m_definition->m_hud)
         {
             PlayAnimationByName("Attack");
         }
         /// Handle player fire animation logic
-        PlayerController* player = dynamic_cast<PlayerController*>(m_owner->m_controller);
+        auto player = dynamic_cast<PlayerController*>(m_owner->m_controller);
         if (player)
         {
             player->GetActor()->PlayAnimationByName("Attack");
@@ -83,11 +85,13 @@ void Weapon::Fire()
                     particleSpawnInfo.m_actorName = "BulletHit";
                     g_theGame->m_map->SpawnActor(particleSpawnInfo);
                 }
-                DebugAddWorldCylinder(startPosGraphic, raycastResult.m_impactPos, 0.01f, 10.f, Rgba8::YELLOW, Rgba8::YELLOW, DebugRenderMode::X_RAY);
+                if (IS_DEBUG_ENABLED())
+                    DebugAddWorldCylinder(startPosGraphic, raycastResult.m_impactPos, 0.01f, 10.f, Rgba8::YELLOW, Rgba8::YELLOW, DebugRenderMode::X_RAY);
             }
             else
             {
-                DebugAddWorldCylinder(startPosGraphic, raycastResult.m_rayStartPos + raycastResult.m_rayFwdNormal * rayRange, 0.01f, 10.f, Rgba8::YELLOW, Rgba8::YELLOW, DebugRenderMode::X_RAY);
+                if (IS_DEBUG_ENABLED())
+                    DebugAddWorldCylinder(startPosGraphic, raycastResult.m_rayStartPos + raycastResult.m_rayFwdNormal * rayRange, 0.01f, 10.f, Rgba8::YELLOW, Rgba8::YELLOW, DebugRenderMode::X_RAY);
             }
             if (hitActor && hitActor->m_handle.IsValid())
             {
@@ -123,13 +127,13 @@ void Weapon::Fire()
             Vec3 fwd, left, up;
             m_owner->m_orientation.GetAsVectors_IFwd_JLeft_KUp(fwd, left, up);
 
-            Vec2  ownerPos2D = Vec2(m_owner->m_position.x, m_owner->m_position.y);
-            Vec2  forward2D  = Vec2(fwd.x, fwd.y);
+            auto  ownerPos2D = Vec2(m_owner->m_position.x, m_owner->m_position.y);
+            auto  forward2D  = Vec2(fwd.x, fwd.y);
             float halfArc    = m_definition->m_meleeArc * 0.5f;
 
-            Actor* bestTarget   = nullptr;
-            float  bestDistSq   = FLT_MAX;
-            float  meleeRangeSq = m_definition->m_meleeRange * m_definition->m_meleeRange;
+            Actor* bestTarget = nullptr;
+            float  bestDist   = FLT_MAX;
+            float  meleeRange = m_definition->m_meleeRange;
 
             for (Actor* testActor : m_owner->m_map->m_actors)
             {
@@ -138,16 +142,17 @@ void Weapon::Fire()
                 if (testActor->m_definition->m_faction == m_owner->m_definition->m_faction)continue;
                 if (testActor->m_definition->m_faction == "NEUTRAL" || m_owner->m_definition->m_faction == "NEUTRAL") continue;
 
-                Vec2  testPos2D = Vec2(testActor->m_position.x, testActor->m_position.y);
-                float distSq    = GetDistanceSquared2D(ownerPos2D, testPos2D);
-                if (distSq > meleeRangeSq) continue;
+                auto  testPos2D         = Vec2(testActor->m_position.x, testActor->m_position.y);
+                float dist              = GetDistance2D(ownerPos2D, testPos2D);
+                float distExcludeRadius = dist - testActor->m_definition->m_physicsRadius - m_owner->m_physicalRadius;
+                if (distExcludeRadius > meleeRange - m_owner->m_physicalRadius) continue;
                 Vec2  toTarget2D = (testPos2D - ownerPos2D).GetNormalized();
                 float angle      = GetAngleDegreesBetweenVectors2D(forward2D, toTarget2D);
                 if (angle > halfArc)continue;
 
-                if (distSq < bestDistSq)
+                if (dist < bestDist)
                 {
-                    bestDistSq = distSq;
+                    bestDist   = dist;
                     bestTarget = testActor;
                 }
             }
@@ -165,17 +170,17 @@ void Weapon::Fire()
 /// TODO: use native Vec3 internal direction methods to get random direction in a cone
 Vec3 Weapon::GetRandomDirectionInCone(Vec3 weaponOrientation, float degreeOfVariation)
 {
-    float       variation   = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
-    EulerAngles orientation = EulerAngles(weaponOrientation.x + variation, weaponOrientation.y + variation, weaponOrientation.z + variation);
+    float variation   = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
+    auto  orientation = EulerAngles(weaponOrientation.x + variation, weaponOrientation.y + variation, weaponOrientation.z + variation);
     return Vec3(orientation);
 }
 
 EulerAngles Weapon::GetRandomDirectionInCone(EulerAngles weaponOrientation, float degreeOfVariation)
 {
-    float       variationYaw   = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
-    float       variationPitch = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
-    float       variationRow   = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
-    EulerAngles newDirection   = EulerAngles(weaponOrientation.m_yawDegrees + variationYaw, weaponOrientation.m_pitchDegrees + variationPitch, weaponOrientation.m_rollDegrees + variationRow);
+    float variationYaw   = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
+    float variationPitch = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
+    float variationRow   = g_rng->RollRandomFloatInRange(-degreeOfVariation, degreeOfVariation);
+    auto  newDirection   = EulerAngles(weaponOrientation.m_yawDegrees + variationYaw, weaponOrientation.m_pitchDegrees + variationPitch, weaponOrientation.m_rollDegrees + variationRow);
     return newDirection;
 }
 
@@ -205,34 +210,28 @@ Animation* Weapon::PlayAnimationByName(std::string animationName, bool force)
         {
             return weaponAnim;
         }
-        else
+        /// We want to replace to new animation, force update it whether or not it finished
+        if (force)
         {
-            /// We want to replace to new animation, force update it whether or not it finished
-            if (force)
+            m_currentPlayingAnimation = weaponAnim;
+            m_animationTimer->Start();
+            return weaponAnim;
+        }
+        if (m_currentPlayingAnimation)
+        {
+            bool isCurrentAnimFinished = m_animationTimer->GetElapsedTime() >= m_currentPlayingAnimation->GetAnimationLength();
+            if (isCurrentAnimFinished)
             {
                 m_currentPlayingAnimation = weaponAnim;
                 m_animationTimer->Start();
                 return weaponAnim;
             }
-            else
-            {
-                if (m_currentPlayingAnimation)
-                {
-                    bool isCurrentAnimFinished = m_animationTimer->GetElapsedTime() >= m_currentPlayingAnimation->GetAnimationLength();
-                    if (isCurrentAnimFinished)
-                    {
-                        m_currentPlayingAnimation = weaponAnim;
-                        m_animationTimer->Start();
-                        return weaponAnim;
-                    }
-                }
-                else
-                {
-                    m_currentPlayingAnimation = weaponAnim;
-                    m_animationTimer->Start();
-                    return weaponAnim;
-                }
-            }
+        }
+        else
+        {
+            m_currentPlayingAnimation = weaponAnim;
+            m_animationTimer->Start();
+            return weaponAnim;
         }
     }
     return nullptr;
@@ -269,8 +268,8 @@ void Weapon::RenderWeaponReticle() const
     Texture* reticleTexture   = m_definition->m_hud->m_reticleTexture;
     Vec2     reticleDimension = reticleTexture->GetDimensions();
 
-    Vec2  reticleSpriteOffSet = -reticleDimension * m_definition->m_hud->m_spritePivot;
-    AABB2 reticleBound        = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f), (Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f) + Vec2(reticleDimension)));
+    Vec2 reticleSpriteOffSet = -reticleDimension * m_definition->m_hud->m_spritePivot;
+    auto reticleBound        = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f), (Vec2(g_theGame->m_screenSpace.m_maxs / 2.0f) + Vec2(reticleDimension)));
 
     /// Change the dimension base on split screen y
     Vec2  dim            = reticleBound.GetDimensions();
@@ -288,8 +287,10 @@ void Weapon::RenderWeaponReticle() const
 void Weapon::RenderWeaponHudText() const
 {
     g_theRenderer->BindTexture(nullptr);
-    PlayerController* player = dynamic_cast<PlayerController*>(m_owner->m_controller);
+    auto player = dynamic_cast<PlayerController*>(m_owner->m_controller);
     if (!player) return;
+    if (!player->GetActor() || player->GetActor()->m_bIsDead)
+        return; // Handle player death not render hud text
     std::vector<Vertex_PCU> vertexes;
     vertexes.reserve(1024);
     BitmapFont* g_testFont     = g_theRenderer->CreateOrGetBitmapFont("Data/Fonts/SquirrelFixedFont");
@@ -297,7 +298,7 @@ void Weapon::RenderWeaponHudText() const
     Vec2        dim            = boundingBox.GetDimensions();
     AABB2       screenViewport = m_owner->m_controller->m_screenViewport;
     float       multiplier     = g_theGame->m_screenSpace.GetDimensions().y / screenViewport.GetDimensions().y;
-    g_testFont->AddVertsForTextInBox2D(vertexes, Stringf("%d", (int)m_owner->m_health), boundingBox, 40.f, Rgba8::WHITE, 1 / multiplier, Vec2(0.29f, 0.5f));
+    g_testFont->AddVertsForTextInBox2D(vertexes, Stringf("%d", static_cast<int>(m_owner->m_health)), boundingBox, 40.f, Rgba8::WHITE, 1 / multiplier, Vec2(0.29f, 0.5f));
     g_testFont->AddVertsForTextInBox2D(vertexes, Stringf("%d", PlayerSaveSubsystem::GetPlayerSaveData(player->m_index)->m_numOfKilled), boundingBox, 40.f, Rgba8::WHITE, 1 / multiplier,
                                        Vec2(0.05f, 0.5f));
     g_testFont->AddVertsForTextInBox2D(vertexes, Stringf("%d", PlayerSaveSubsystem::GetPlayerSaveData(player->m_index)->m_numOfDeaths), boundingBox, 40.f, Rgba8::WHITE, 1 / multiplier,
@@ -309,10 +310,13 @@ void Weapon::RenderWeaponHudText() const
 
 void Weapon::RenderWeaponAnim() const
 {
+    auto player = dynamic_cast<PlayerController*>(m_owner->m_controller);
+    if (!player->GetActor() || player->GetActor()->m_bIsDead)
+        return; // Handle player death not render anim
     std::vector<Vertex_PCU> vertexes;
     vertexes.reserve(1024);
     Animation* animation = m_currentPlayingAnimation;
-    if (animation == nullptr && (int)m_definition->m_hud->GetAnimations().size() > 0) // We use the index 0 animation group
+    if (animation == nullptr && static_cast<int>(m_definition->m_hud->GetAnimations().size()) > 0) // We use the index 0 animation group
     {
         animation = &m_definition->m_hud->GetAnimations()[0];
     }
@@ -323,7 +327,7 @@ void Weapon::RenderWeaponAnim() const
     Vec2 spriteOffSet = -Vec2(m_definition->m_hud->m_spriteSize) * m_definition->m_hud->m_spritePivot;
 
     IntVec2 boundSize = m_definition->m_hud->m_spriteSize;
-    AABB2   bound     = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f), Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f) + Vec2(boundSize));
+    auto    bound     = AABB2(Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f), Vec2(g_theGame->m_screenSpace.m_maxs.x / 2.0f, 0.f) + Vec2(boundSize));
 
     /// Change the dimension base on split screen y
     Vec2  dim            = bound.GetDimensions();
