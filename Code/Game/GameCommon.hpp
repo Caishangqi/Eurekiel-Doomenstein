@@ -5,6 +5,13 @@
 #define COSMIC
 //#define DEBUG_GRID
 
+#define PLAY_SOUND_CLICK(configKey) \
+do { \
+SoundID sid = g_theAudio->CreateOrGetSound(g_gameConfigBlackboard.GetValue(configKey, "")); \
+g_theAudio->StartSound(sid, false, 0.5f); \
+} while (0)
+
+#define IS_DEBUG_ENABLED() (g_gameConfigBlackboard.GetValue("enableDebug", false))
 
 struct Vertex_PCU;
 struct Rgba8;
@@ -17,6 +24,8 @@ class InputSystem;
 class AudioSystem;
 class Game;
 class WidgetSubsystem;
+class ResourceSubsystem;
+class PlayerSaveSubsystem;
 
 extern RandomNumberGenerator* g_rng;
 extern App*                   g_theApp;
@@ -25,6 +34,8 @@ extern InputSystem*           g_theInput;
 extern AudioSystem*           g_theAudio;
 extern Game*                  g_theGame;
 extern WidgetSubsystem*       g_theWidgetSubsystem;
+extern ResourceSubsystem*     g_theResourceSubsystem;
+extern PlayerSaveSubsystem*   g_thePlayerSaveSubsystem;
 
 
 /// Loaders
